@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    container_name: api
+    restart: always
+    command: sh -c 'cd app && task run'
+    ports:
+      - 5000:5000
+    volumes:
+      - .:/app

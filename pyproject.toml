@@ -9,3 +9,6 @@ cálculo automático de dívidas e relatórios.
 authors = [
     {name = 'Eric', email = 'ericcardoso454@gmail.com'}
 ]
+
+[tool.taskipy.tasks]
+run = 'python3 app.py'
