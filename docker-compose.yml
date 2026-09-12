@@ -1,10 +1,29 @@
 services:
+  db:
+    image: ${MYSQL_IMAGE}
+    container_name: ${CONTAINER_DATABASE_NAME}
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    ports:
+      - '${DATABASE_PORT}:${DATABASE_PORT}'
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
+      - mysql_data:/var/lib/mysql
+  
   api:
     build: .
-    container_name: api
+    container_name: ${CONTAINER_API_NAME}
     restart: always
-    command: sh -c 'cd app && task run'
+    command: sh -c 'python3 -m app.app'
     ports:
-      - 5000:5000
+      - '${API_PORT}:${API_PORT}'
     volumes:
-      - .:/app
+      - '.:/app'
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:
