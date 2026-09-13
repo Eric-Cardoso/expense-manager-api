@@ -117,7 +117,7 @@ async def test_register_user_should_return_successfully_registered_user(
 
         # Assert
         assert expected_response == response['message_success']
-        assert status_code == 200
+        assert status_code == 201
 
 
 async def test_register_user_should_call_dependencies_with_correct_arguments(
@@ -150,7 +150,7 @@ async def test_register_user_should_call_dependencies_with_correct_arguments(
 
         # Assert
         assert expected_response == response['message_success']
-        assert status_code == 200
+        assert status_code == 201
 
         mocker_email.assert_called_once_with(
             user_email=user['email']
@@ -220,7 +220,7 @@ async def test_register_user_should_raise_exception_if_connection_fails(
         mocker_close_connection.assert_not_called()
 
 
-async def test_register_user_should_raise_exception_if_execute_fails(
+async def test_register_user_should_raise_exception_if_insert_fails(
     mocker_email, mocker_password, mocker_password_hash, mocker_get_connection,
     mocker_get_cursor, mocker_insert_user, mocker_save_data,
     mocker_close_connection, mocker_close_cursor, user, app

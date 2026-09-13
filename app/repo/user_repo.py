@@ -14,5 +14,22 @@ def insert_user(data_user: dict, db_cursor: MySQLCursorAbstract) -> None:
     ))
 
 
+def get_user_by_email(
+    user_email: str, db_cursor: MySQLCursorAbstract
+) -> dict | None:
+
+    select_comand = '''
+        SELECT id, name, email, password_hash
+        FROM users
+        WHERE email = %s
+    '''
+
+    db_cursor.execute(select_comand, (user_email,))
+
+    return db_cursor.fetchone()
+
+    
+
+
 
     

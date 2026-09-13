@@ -18,7 +18,7 @@ def get_connection() -> MySQLConnectionAbstract:
     )
 
 def get_cursor(db_conn: MySQLConnectionAbstract) -> MySQLCursorAbstract: 
-    return db_conn.cursor()
+    return db_conn.cursor(dictionary=True)
 
 def close_connection(db_conn: MySQLConnectionAbstract) -> None:
     db_conn.close()

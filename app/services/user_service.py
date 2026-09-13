@@ -38,7 +38,7 @@ async def register_user() -> dict:
 
         save_data(db_conn=db_conn)
 
-        return {'message_success': 'Usuário cadastrado com sucesso'}, 200
+        return {'message_success': 'Usuário cadastrado com sucesso'}, 201
 
     except Exception:
         if db_conn:
