@@ -74,6 +74,14 @@ def mocker_get_user(mocker):
     return mocked_get_user
 
 @pytest.fixture
+def mocker_insert_token_data(mocker):
+    mocked_insert_token_data = mocker.patch(
+        'app.services.auth_service.insert_token_data'
+    )
+
+    return mocked_insert_token_data
+
+@pytest.fixture
 def mocker_save_data(mocker):
     mocked_save_data = mocker.patch(
         'app.services.auth_service.save_data'
@@ -100,6 +108,7 @@ def mocker_close_cursor(mocker):
 async def test_login_user_it_should_return_the_expected_message(
     user, app, mocker_get_connection, mocker_get_cursor, mocker_get_user, 
     mocker_verify_password, mocker_generate_access_token, mocker_generate_refresh_token,
+    mocker_insert_token_data, mocker_save_data,
     mocker_close_connection, mocker_close_cursor
 ) -> None:
     
@@ -117,6 +126,8 @@ async def test_login_user_it_should_return_the_expected_message(
             'dGhpcyBpcyBhIHNhbXBsZSByZ'
             'WZyZXNoIHRva2VuIGV4YW1wbGU'
         )
+        mocker_insert_token_data.return_value = None
+        mocker_save_data.return_value = None
         mocker_close_cursor.return_value = None
         mocker_close_connection.return_value = None
 
@@ -136,8 +147,9 @@ async def test_login_user_it_should_return_the_expected_message(
         assert status_code == 200
 
 async def test_login_user_verify_expected_behavior(
-    user, app, mocker_get_connection, mocker_get_cursor, mocker_get_user, 
+    user, mocker, app, mocker_get_connection, mocker_get_cursor, mocker_get_user, 
     mocker_verify_password, mocker_generate_access_token, mocker_generate_refresh_token,
+    mocker_insert_token_data, mocker_save_data,
     mocker_close_connection, mocker_close_cursor,
     access_token_expiration_time, refresh_token_expiration_time
 ) -> None:
@@ -156,6 +168,8 @@ async def test_login_user_verify_expected_behavior(
             'dGhpcyBpcyBhIHNhbXBsZSByZ'
             'WZyZXNoIHRva2VuIGV4YW1wbGU'
         )
+        mocker_insert_token_data.return_value = None
+        mocker_save_data.return_value = None
         mocker_close_cursor.return_value = None
         mocker_close_connection.return_value = None
 
@@ -190,6 +204,17 @@ async def test_login_user_verify_expected_behavior(
             user_id=user['id'],
             refresh_token_expiration_time=refresh_token_expiration_time
         )
+        mocker_insert_token_data.assert_called_once_with(
+            token_data={
+                'user_id': user['id'],
+                'token_hash': mocker.ANY,
+                'is_revoked': False,
+                'expiration_date': mocker.ANY,
+                'created_at': mocker.ANY
+            },
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         mocker_close_cursor.assert_called_once()
         mocker_close_connection.assert_called_once()
 
@@ -385,6 +410,53 @@ async def test_login_user_should_raise_exception_if_verify_generate_refresh_toke
             user_id=user['id'],
             refresh_token_expiration_time=refresh_token_expiration_time
         )
+        mocker_close_cursor.assert_called_once()
+        mocker_close_connection.assert_called_once()
+
+
+async def test_login_user_should_raise_exception_if_insert_token_data_fails(
+    user, app, mocker_get_connection, mocker_get_cursor, mocker_get_user, 
+    mocker_verify_password, mocker_generate_access_token, mocker_generate_refresh_token,
+    mocker_insert_token_data, mocker_save_data,
+    mocker_close_connection, mocker_close_cursor,
+    access_token_expiration_time, refresh_token_expiration_time
+) -> None:
+
+    with app.test_request_context(json=user):
+        # Arrange
+        user['id'] = 1
+        user['password_hash'] = user['password']
+
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+        mocker_get_user.return_value = user
+        mocker_verify_password.return_value = None
+        mocker_generate_access_token.return_value = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9'
+        mocker_generate_refresh_token.return_value = (
+            'dGhpcyBpcyBhIHNhbXBsZSByZ'
+            'WZyZXNoIHRva2VuIGV4YW1wbGU'
+        )
+        mocker_insert_token_data.side_effect = IntegrityError('Insert failed')
+
+        expected_message_error = 'Não foi possível realizar o login, tente novamente'
+
+        # Act
+        response, status_code = await login_user()
+
+        # Assert
+        assert expected_message_error == response['error_message']
+        assert status_code == 401
+
+        mocker_generate_access_token.assert_called_once_with(
+            user_id=user['id'],
+            access_token_expiration_time=access_token_expiration_time
+        )
+        mocker_generate_refresh_token.assert_called_once_with(
+            user_id=user['id'],
+            refresh_token_expiration_time=refresh_token_expiration_time
+        )
+        mocker_insert_token_data.assert_called_once()
+        mocker_save_data.assert_not_called()
         mocker_close_cursor.assert_called_once()
         mocker_close_connection.assert_called_once()
 

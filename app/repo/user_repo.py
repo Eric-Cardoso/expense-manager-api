@@ -2,13 +2,13 @@ from mysql.connector.abstracts import MySQLCursorAbstract
 
 def insert_user(data_user: dict, db_cursor: MySQLCursorAbstract) -> None:
 
-    insert_comand = '''
+    insert_command = '''
         INSERT INTO users (name, email, password_hash)
         VALUES (%s, %s, %s)
     '''
 
-    db_cursor.execute(insert_comand, (
-        data_user['name'], 
+    db_cursor.execute(insert_command, (
+        data_user['name'] if data_user.get('name') else None, 
         data_user['email'], 
         data_user['password']
     ))
