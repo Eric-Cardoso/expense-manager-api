@@ -6,6 +6,7 @@ from app.routers.user_router import route_user_bp
 
 
 app = Flask(__name__)
+app.json.sort_keys = False
 
 app.register_blueprint(route_user_bp)
 app.register_blueprint(route_auth_bp)

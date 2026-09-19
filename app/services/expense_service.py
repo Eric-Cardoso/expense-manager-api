@@ -1,12 +1,12 @@
 from flask import request
 from app.repo.database import (
-    get_connection, 
+    get_connection,
     get_cursor,
-    save_data, 
+    save_data,
     close_connection, 
     close_cursor
 )
-from app.repo.expense_repo import insert_expense
+from app.repo.expense_repo import insert_expense, get_expenses
 from datetime import datetime
 
 
@@ -74,6 +74,38 @@ async def manually_enter_expense(request_token):
             'error_message': (
                 'Não foi possível registrar sua despesa, tente novamente'
             )
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+
+
+async def get_user_expenses(request_token):
+    db_conn = None
+    db_cursor = None
+    try:
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        user_expenses = get_expenses(
+            user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        if not user_expenses:
+            return {'error_message': 'Nenhuma despesa encontrada'}, 404
+
+        return {
+            'success_message': 'Despesas encontradas com sucesso',
+            'expenses': user_expenses
+        }, 200
+
+    except Exception:
+        return {
+            'error_message': 'Erro ao buscar despesas, tente novamente'
         }, 400
 
     finally:
