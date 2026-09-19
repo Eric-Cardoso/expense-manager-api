@@ -14,7 +14,8 @@ def get_connection() -> MySQLConnectionAbstract:
         user=os.getenv('MYSQL_USER'),
         password=os.getenv('MYSQL_PASSWORD'),
         host=os.getenv('DATABASE_HOST'),
-        port=int(os.getenv('DATABASE_PORT'))
+        port=int(os.getenv('DATABASE_PORT')),
+        charset='utf8mb4'
     )
 
 def get_cursor(db_conn: MySQLConnectionAbstract) -> MySQLCursorAbstract: 

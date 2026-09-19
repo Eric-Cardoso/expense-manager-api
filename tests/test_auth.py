@@ -4,7 +4,9 @@ from app.auth.auth_user import (
     generate_access_token, 
     generate_refresh_token
 )
+from app.auth.decorators import login_required
 from app.services.auth_service import login_user, renew_user_session
+from app.services.expense_service import manually_enter_expense
 import pytest
 import os
 
@@ -122,6 +124,13 @@ def mocker_jwt(mocker):
     return mocked_jwt
 
 @pytest.fixture
+def mocker_decorator_jwt(mocker):
+    mocked_decorator_jwt = mocker.patch('app.auth.decorators.jwt')
+
+    return mocked_decorator_jwt
+
+
+@pytest.fixture
 def mocker_get_user_token_data(mocker):
     mocked_get_user_token_data = mocker.patch(
         'app.services.auth_service.get_user_token_data'
@@ -136,6 +145,18 @@ def mocker_hash_token(mocker):
     )
 
     return mocked_hash_token
+
+@pytest.fixture
+def mocker_request_access_token():
+    return {
+        'Authorization': (
+            'Bearer dGhpcyBpcyBhIHNhbXBsZSByZWZyZXNoIHRva2VuIGV4YW1wbGU'
+        )
+    }
+
+@login_required
+async def fake_insert_expense(request_token):
+    return {'success_message': 'Despesa registrada com sucesso'}, 201
 
 
 async def test_login_user_it_should_return_the_expected_message(
@@ -1197,4 +1218,110 @@ async def test_renew_user_should_raise_exception_if_generate_access_token_fails(
         )
         mocker_close_connection.assert_called_once_with(
             db_conn=db_conn,
+        )
+
+
+async def test_auth_logic_verify_expected_behavior(
+    app, mocker, mocker_decorator_jwt, mocker_request_access_token
+) -> None:
+
+    info_token = {
+        'sub': str(1),
+        'exp': mocker.ANY
+    }
+
+    with app.test_request_context(
+        headers=mocker_request_access_token
+    ):
+        # Arrange
+        mocker_decode = mocker_decorator_jwt.decode
+
+        mocker_decode.return_value = info_token
+
+        expected_message = 'Despesa registrada com sucesso'
+
+        # Act
+        response, status_code = await fake_insert_expense()
+
+        # Assert
+        assert expected_message == response['success_message']
+        assert status_code == 201
+        
+        mocker_decode.assert_called_once_with(
+            jwt=mocker_request_access_token['Authorization'].split()[1], 
+            key=os.getenv('SECRET_KEY'), 
+            algorithms=[os.getenv('ALGORITHM')]
+        )
+
+
+async def test_auth_logic_should_raise_exception_if_request_token_missing(
+    app, mocker_decorator_jwt
+) -> None:
+
+
+    with app.test_request_context():
+        # Arrange
+        expected_message = 'Operação inválida'
+
+        # Act
+        response, status_code = await fake_insert_expense()
+
+        # Assert
+        assert expected_message == response['message_error']
+        assert status_code == 401
+        
+        mocker_decorator_jwt.decode.assert_not_called()
+
+
+async def test_auth_logic_should_raise_exception_if_bearer_prefix_missing(
+    app, mocker_decorator_jwt
+) -> None:
+
+    fake_request_access_token = {
+        'Authorization':(
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.iIsInR5cCI6IkJhbGciugfD4'
+        )
+    }
+
+    with app.test_request_context(
+        headers=fake_request_access_token
+    ):
+        # Arrange
+        expected_message = 'Operação inválida'
+
+        # Act
+        response, status_code = await fake_insert_expense()
+
+        # Assert
+        assert expected_message == response['message_error']
+        assert status_code == 401
+        
+        mocker_decorator_jwt.decode.assert_not_called()
+
+
+async def test_auth_logic_should_raise_execption_if_decode_fails(
+    app, mocker_decorator_jwt, mocker_request_access_token
+) -> None:
+
+    with app.test_request_context(
+        headers=mocker_request_access_token
+    ):
+        # Arrange
+        mocker_decode = mocker_decorator_jwt.decode
+
+        mocker_decode.side_effect = ValueError('Token invalid')
+
+        expected_message = 'Operação inválida'
+
+        # Act
+        response, status_code = await fake_insert_expense()
+
+        # Assert
+        assert expected_message == response['message_error']
+        assert status_code == 401
+        
+        mocker_decode.assert_called_once_with(
+            jwt=mocker_request_access_token['Authorization'].split()[1], 
+            key=os.getenv('SECRET_KEY'), 
+            algorithms=[os.getenv('ALGORITHM')]
         )
