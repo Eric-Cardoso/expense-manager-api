@@ -1,6 +1,7 @@
 from app.services.expense_service import (
     manually_enter_expense, 
-    get_user_expenses
+    get_user_expenses,
+    get_user_expense
 )
 from datetime import datetime
 from mysql.connector.errors import OperationalError, IntegrityError
@@ -109,20 +110,24 @@ def get_expense():
     return expense_data
 
 @pytest.fixture
-def mocker_request_access_token():
-    return {
-        'Authorization': (
-            'Bearer dGhpcyBpcyBhIHNhbXBsZSByZWZyZXNoIHRva2VuIGV4YW1wbGU'
-        )
-    }
-
-@pytest.fixture
 def mocker_get_expenses(mocker):
     mocked_get_user_expenses = mocker.patch(
         'app.services.expense_service.get_expenses'
     )
 
     return mocked_get_user_expenses
+
+@pytest.fixture
+def mocker_get_expense(mocker):
+    mocked_get_user_expense = mocker.patch(
+        'app.services.expense_service.get_expense'
+    )
+
+    return mocked_get_user_expense
+
+@pytest.fixture
+def mocker_expense_id():
+    return 1
 
 
 async def test_register_expense_verify_expected_behavior(
@@ -344,15 +349,14 @@ async def test_register_expense_should_raise_exception_if_save_data_fails(
 
 async def test_get_expenses_verify_expected_behavior(
     app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_request_access_token, mocker_get_expenses, 
-    get_expense, mocker_token
+    mocker_close_cursor, mocker_get_expenses, get_expense, mocker_token
 ) -> None:
 
-    with app.test_request_context(headers=mocker_request_access_token):
+    with app.test_request_context():
         # Arrange
         db_conn = mocker_get_connection.return_value
         db_cursor = mocker_get_cursor.return_value
-        mocker_get_expenses.return_value = get_expense
+        mocker_get_expenses.return_value = [get_expense]
 
         expected_message = 'Despesas encontradas com sucesso'
 
@@ -383,11 +387,10 @@ async def test_get_expenses_verify_expected_behavior(
 
 async def test_get_expenses_should_raise_exception_if_connection_fails(
     app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_request_access_token, mocker_get_expenses,
-    mocker_token
+    mocker_close_cursor, mocker_get_expenses, mocker_token
 ) -> None:
 
-    with app.test_request_context(headers=mocker_request_access_token):
+    with app.test_request_context():
         # Arrange
         mocker_get_connection.side_effect = OperationalError('Connection lost')
 
@@ -409,11 +412,10 @@ async def test_get_expenses_should_raise_exception_if_connection_fails(
 
 async def test_get_expenses_should_raise_exception_if_cursor_fails(
     app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_request_access_token, mocker_get_expenses,
-    mocker_token
+    mocker_close_cursor, mocker_get_expenses, mocker_token
 ) -> None:
 
-    with app.test_request_context(headers=mocker_request_access_token):
+    with app.test_request_context():
         # Arrange
         db_conn = mocker_get_connection.return_value
         mocker_get_cursor.side_effect = OperationalError('Cursor lost')
@@ -440,11 +442,10 @@ async def test_get_expenses_should_raise_exception_if_cursor_fails(
 
 async def test_get_expenses_should_raise_exception_if_get_expenses_fails(
     app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_request_access_token, mocker_get_expenses,
-    mocker_token
+    mocker_close_cursor, mocker_get_expenses, mocker_token
 ) -> None:
 
-    with app.test_request_context(headers=mocker_request_access_token):
+    with app.test_request_context():
         # Arrange
         db_conn = mocker_get_connection.return_value
         db_cursor = mocker_get_cursor.return_value
@@ -477,11 +478,10 @@ async def test_get_expenses_should_raise_exception_if_get_expenses_fails(
 
 async def test_get_expenses_should_raise_exception_if_user_expenses_not_found_fails(
     app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_request_access_token, mocker_get_expenses,
-    mocker_token
+    mocker_close_cursor, mocker_get_expenses, mocker_token
 ) -> None:
 
-    with app.test_request_context(headers=mocker_request_access_token):
+    with app.test_request_context():
         # Arrange
         db_conn = mocker_get_connection.return_value
         db_cursor = mocker_get_cursor.return_value
@@ -503,6 +503,214 @@ async def test_get_expenses_should_raise_exception_if_user_expenses_not_found_fa
         mocker_get_expenses.assert_called_once_with(
             user_id=int(mocker_token['sub']),
             db_cursor=db_cursor
+        )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_expense_verify_expected_behavior(
+    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_get_expense, get_expense, mocker_token,
+    mocker_expense_id
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+        mocker_get_expense.return_value = get_expense
+
+        expected_message = 'Despesa encontrada com sucesso'
+
+        # Act
+        response, status_code = await get_user_expense(
+            request_token=mocker_token,
+            header_expense_id=mocker_expense_id
+        )
+
+        # Assert
+        assert expected_message == response['success_message']
+        assert status_code == 200
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_expense.assert_called_once_with(
+            expense_id=mocker_expense_id,
+            logged_in_user_id=mocker_token['sub'],
+            db_cursor=db_cursor 
+        )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_expense_should_raise_exception_if_expense_id_missing(
+    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_get_expense, mocker_token
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        expected_message = 'Erro ao buscar despesa, tente novamente'
+
+        # Act
+        response, status_code = await get_user_expense(
+            mocker_token,
+            None
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_not_called()
+        mocker_get_cursor.assert_not_called()
+        mocker_get_expense.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_get_expense_should_raise_exception_if_connection_fails(
+    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_get_expense, mocker_token, mocker_expense_id
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        mocker_get_connection.side_effect = OperationalError('Connection lost')
+
+        expected_message = 'Erro ao buscar despesa, tente novamente'
+
+        # Act
+        response, status_code = await get_user_expense(
+            request_token=mocker_token,
+            header_expense_id=mocker_expense_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_not_called()
+        mocker_get_expense.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_get_expense_should_raise_exception_if_cursor_fails(
+    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_get_expense, mocker_token, mocker_expense_id
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        mocker_get_cursor.side_effect = OperationalError('Cursor lost')
+
+        expected_message = 'Erro ao buscar despesa, tente novamente'
+
+        # Act
+        response, status_code = await get_user_expense(
+            request_token=mocker_token,
+            header_expense_id=mocker_expense_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_expense.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_expense_should_raise_exception_if_get_expense_fails(
+    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_get_expense, mocker_token, mocker_expense_id
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+        mocker_get_expense.side_effect = IntegrityError('Expense not found')
+
+        expected_message = 'Erro ao buscar despesa, tente novamente'
+
+        # Act
+        response, status_code = await get_user_expense(
+            request_token=mocker_token,
+            header_expense_id=mocker_expense_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_expense.assert_called_once_with(
+            expense_id=mocker_expense_id,
+            logged_in_user_id=mocker_token['sub'],
+            db_cursor=db_cursor 
+        )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_expense_should_raise_exception_if_expense_not_found(
+    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_get_expense, mocker_token, mocker_expense_id
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+        mocker_get_expense.return_value = None
+
+        expected_message = 'Despesa não encontrada'
+
+        # Act
+        response, status_code = await get_user_expense(
+            mocker_token,
+            header_expense_id=mocker_expense_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 404
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_expense.assert_called_once_with(
+            expense_id=mocker_expense_id,
+            logged_in_user_id=mocker_token['sub'],
+            db_cursor=db_cursor 
         )
         mocker_close_cursor.assert_called_once_with(
             db_cursor=db_cursor

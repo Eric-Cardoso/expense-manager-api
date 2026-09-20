@@ -42,3 +42,20 @@ def get_expenses(user_id: int, db_cursor: MySQLCursorAbstract) -> list[dict]:
     db_cursor.execute(get_expenses_command, (user_id,))
 
     return db_cursor.fetchall()
+
+
+def get_expense(
+    expense_id: int, 
+    logged_in_user_id: int, 
+    db_cursor: MySQLCursorAbstract
+) -> dict:
+    get_expense_command = '''
+        SELECT * FROM expenses
+        WHERE id = %s
+        AND user_id = %s
+    '''
+
+    db_cursor.execute(get_expense_command, (expense_id, logged_in_user_id))
+
+    return db_cursor.fetchone()
+    

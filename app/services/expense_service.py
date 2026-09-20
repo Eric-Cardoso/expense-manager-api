@@ -6,7 +6,7 @@ from app.repo.database import (
     close_connection, 
     close_cursor
 )
-from app.repo.expense_repo import insert_expense, get_expenses
+from app.repo.expense_repo import insert_expense, get_expenses, get_expense
 from datetime import datetime
 
 
@@ -106,6 +106,42 @@ async def get_user_expenses(request_token):
     except Exception:
         return {
             'error_message': 'Erro ao buscar despesas, tente novamente'
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+
+
+async def get_user_expense(request_token, header_expense_id):
+    db_conn = None
+    db_cursor = None
+    try:
+        if not header_expense_id:
+            raise ValueError('Expense ID missing') 
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        user_expense = get_expense(
+            expense_id=header_expense_id,
+            logged_in_user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        if not user_expense:
+            return {'error_message': 'Despesa não encontrada'}, 404
+
+        return {
+            'success_message': 'Despesa encontrada com sucesso',
+            'expense': user_expense
+        }, 200
+
+    except Exception:
+        return {
+            'error_message': 'Erro ao buscar despesa, tente novamente'
         }, 400
 
     finally:
