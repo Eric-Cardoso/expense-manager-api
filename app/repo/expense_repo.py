@@ -58,4 +58,40 @@ def get_expense(
     db_cursor.execute(get_expense_command, (expense_id, logged_in_user_id))
 
     return db_cursor.fetchone()
-    
+
+
+def update_expense(
+    expense_data: dict, 
+    expense_id: int, 
+    logged_in_user_id: int, 
+    db_cursor: MySQLCursorAbstract
+) -> None:
+
+    update_command = '''
+        UPDATE expenses
+        SET
+            title = %s,
+            description = %s,
+            category = %s,
+            status = %s,
+            value = %s,
+            in_installments = %s,
+            number_installments = %s,
+            register_date = %s,
+            maturity_date = %s
+        WHERE id = %s AND user_id = %s
+    '''
+
+    db_cursor.execute(update_command, (
+        expense_data['title'],
+        expense_data['description'],
+        expense_data['category'],
+        expense_data['status'],
+        expense_data['value'],
+        expense_data['in_installments'],
+        expense_data.get('number_installments'),
+        expense_data['register_date'],
+        expense_data['maturity_date'],
+        expense_id,
+        logged_in_user_id
+    ))

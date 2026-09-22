@@ -6,7 +6,12 @@ from app.repo.database import (
     close_connection, 
     close_cursor
 )
-from app.repo.expense_repo import insert_expense, get_expenses, get_expense
+from app.repo.expense_repo import (
+    insert_expense, 
+    get_expenses, 
+    get_expense, 
+    update_expense
+)
 from datetime import datetime
 
 
@@ -149,3 +154,93 @@ async def get_user_expense(request_token, header_expense_id):
             close_cursor(db_cursor=db_cursor)
         if db_conn:
             close_connection(db_conn=db_conn)
+
+
+async def manually_update_expense(request_token, header_expense_id):
+    db_conn = None
+    db_cursor = None
+    try:
+        expense_data = request.get_json()
+
+        if not header_expense_id or not expense_data:
+            raise ValueError('Header expense id or expense data missing')
+
+        if expense_data.get('csv_id'):
+            raise ValueError(
+                'This endpoint is only for manual expense entry'
+            )
+
+        if not expense_data.get('in_installments') and expense_data.get(
+            'number_installments'
+        ):
+            raise ValueError(
+                'Number of installments sent for a non-installment expense'
+            )
+
+        if expense_data.get('in_installments') and not expense_data.get(
+            'number_installments'
+        ):
+            raise ValueError(
+                'Number of installments is required for installment expenses'
+            )
+
+        if not expense_data.get('register_date') or not expense_data.get(
+            'maturity_date'
+        ):
+            raise ValueError(
+                'Register date and maturity date are required'
+            )
+
+        try:
+            expense_data['register_date'] = datetime.strptime(
+                expense_data['register_date'], '%Y-%m-%d'
+            )
+            expense_data['maturity_date'] = datetime.strptime(
+                expense_data['maturity_date'], '%Y-%m-%d'
+            )
+        except ValueError:
+            raise ValueError(
+                'Dates must be in the YYYY-MM-DD format'
+            )
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        db_expense = get_expense(
+            expense_id=header_expense_id,
+            logged_in_user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        if not db_expense:
+            return {
+                'error_message': (
+                    'Erro ao atualizar despesa, despesa não encontrada'
+                )
+            }, 404
+
+        update_expense(
+            expense_data=expense_data,
+            expense_id=header_expense_id,
+            logged_in_user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        save_data(db_conn=db_conn)
+
+        return {'success_message': 'Despesa atualizada com sucesso'}, 200
+
+    except Exception as error:
+        print(error)
+        if db_conn:
+            db_conn.rollback()
+        return {
+            'error_message': 'Erro ao atualizar despesa, tente novamente'
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+        
