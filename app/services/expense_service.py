@@ -10,7 +10,8 @@ from app.repo.expense_repo import (
     insert_expense, 
     get_expenses, 
     get_expense, 
-    update_expense
+    update_expense,
+    delete_expense
 )
 from datetime import datetime
 
@@ -244,3 +245,50 @@ async def manually_update_expense(request_token, header_expense_id):
         if db_conn:
             close_connection(db_conn=db_conn)
         
+
+async def delete_user_expense(request_token, header_expense_id):
+    db_conn = None
+    db_cursor = None
+
+    try:
+        if not header_expense_id:
+            raise ValueError('Header expense ID missing')
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        db_expense = get_expense(
+            expense_id=header_expense_id,
+            logged_in_user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        if not db_expense:
+            return {
+                'error_message': (
+                    'Erro ao deletar despesa, despesa não encontrada'
+                )
+            }, 404
+
+        delete_expense(
+            expense_id=header_expense_id,
+            logged_in_user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        save_data(db_conn=db_conn) 
+
+        return '', 204
+
+    except Exception:
+        if db_conn:
+            db_conn.rollback()
+        return {
+            'error_message': 'Erro ao deletar despesa, tente novamente'
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)

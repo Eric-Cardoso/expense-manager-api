@@ -95,3 +95,18 @@ def update_expense(
         expense_id,
         logged_in_user_id
     ))
+
+
+def delete_expense(
+    expense_id: int, 
+    logged_in_user_id: int, 
+    db_cursor: MySQLCursorAbstract
+) -> None:
+
+    delete_command = '''
+        DELETE FROM expenses
+        WHERE id = %s 
+        AND user_id = %s
+    '''
+
+    db_cursor.execute(delete_command, (expense_id, logged_in_user_id))

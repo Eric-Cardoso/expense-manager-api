@@ -4,7 +4,8 @@ from app.services.expense_service import (
     manually_enter_expense, 
     get_user_expenses,
     get_user_expense,
-    manually_update_expense
+    manually_update_expense,
+    delete_user_expense
 )
 
 
@@ -36,6 +37,15 @@ async def route_get_user_expense(request_token, expense_id) -> dict:
 @login_required
 async def route_manually_update_expense(request_token, expense_id) -> dict:
     return await manually_update_expense(
+        request_token=request_token, 
+        header_expense_id=expense_id
+    )
+
+
+@route_expense_bp.route('/<int:expense_id>', methods=['DELETE'])
+@login_required
+async def route_delete_user_expense(request_token, expense_id) -> dict:
+    return await delete_user_expense(
         request_token=request_token, 
         header_expense_id=expense_id
     )
