@@ -5,7 +5,8 @@ from app.services.expense_service import (
     get_user_expenses,
     get_user_expense,
     manually_update_expense,
-    delete_user_expense
+    delete_user_expense,
+    register_user_expense_by_csv
 )
 
 
@@ -22,6 +23,12 @@ async def route_manually_enter_expense(request_token) -> dict:
 @login_required
 async def route_get_user_expenses(request_token) -> dict:
     return await get_user_expenses(request_token=request_token)
+
+
+@route_expense_bp.route('/csv', methods=['POST'])
+@login_required
+async def route_register_user_expense_by_csv(request_token) -> dict:
+    return await register_user_expense_by_csv(request_token=request_token)
 
 
 @route_expense_bp.route('/<int:expense_id>', methods=['GET'])

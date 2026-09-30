@@ -3,9 +3,10 @@ from app.services.expense_service import (
     get_user_expenses,
     get_user_expense,
     manually_update_expense,
-    delete_user_expense
+    delete_user_expense,
+    register_user_expense_by_csv
 )
-from datetime import datetime
+from datetime import datetime, timezone
 from mysql.connector.errors import OperationalError, IntegrityError
 
 import pytest
@@ -147,6 +148,53 @@ def mocker_delete_expense(mocker):
     )
 
     return mocked_delete_expense
+
+
+@pytest.fixture
+def mocker_csv_path():
+    return {'csv_path': 'csv://caminho.csv'}
+
+
+@pytest.fixture
+def mocker_csv_data():
+    return {
+        'user_id': 1,
+        'status': 'pendente',
+        'attached_at': datetime.now(tz=timezone.utc).date(),
+        'valid': False
+    }
+
+
+@pytest.fixture
+def mocker_insert_csv(mocker):
+    mocked_insert_attached_csv = mocker.patch(
+        'app.services.expense_service.insert_csv'
+    )
+
+    return mocked_insert_attached_csv
+
+
+@pytest.fixture
+def mocker_process_csv(mocker):
+    mocked_process_csv = mocker.patch(
+        'app.services.expense_service.process_csv'
+    )
+
+    return mocked_process_csv
+
+
+@pytest.fixture
+def mocker_get_csv(mocker):
+    mocked_get_csv = mocker.patch(
+        'app.services.expense_service.get_csv_after_insert_csv'
+    )
+
+    return mocked_get_csv
+
+
+@pytest.fixture
+def mocker_csv_id():
+    return 1
 
 
 async def test_register_expense_verify_expected_behavior(
@@ -1477,4 +1525,452 @@ async def test_delete_expense_should_raise_exception_if_save_data_fails(
         mocker_close_connection.assert_called_once_with(
             db_conn=db_conn
         )
+
+
+async def test_insert_user_expense_by_csv_verify_expected_behavior(
+    mocker_get_connection, mocker_get_cursor, app, mocker_save_data, 
+    mocker_csv_path, mocker_token, mocker_close_cursor, mocker_close_connection, 
+    mocker_csv_data, mocker_insert_csv, mocker_process_csv, 
+    mocker_get_csv, mocker_csv_id
+) -> None:
     
+    with app.test_request_context(json=mocker_csv_path):
+        # Arrange
+        mocker_csv_data['id'] = mocker_csv_id
+        
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_csv.return_value = mocker_csv_data
+
+        expected_message = 'Despesa(s) cadastrada(s) com sucesso'
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        del mocker_csv_data['id']
+        
+        assert expected_message == response['success_message']
+        assert status_code == 201
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_insert_csv.assert_called_once_with(
+            csv_data=mocker_csv_data,
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_called_once_with(
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_process_csv.delay.assert_called_once_with(
+            csv_path=mocker_csv_path['csv_path'],
+            csv_id=1,
+            user_id=mocker_token['sub']
+        )
+        db_conn.rollback.assert_not_called()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor,
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn,
+        )
+
+
+async def test_insert_user_expense_by_csv_should_raise_exception_if_csv_path_or_request_token_missing(
+    mocker_get_connection, mocker_get_cursor, app, mocker_insert_csv,
+    mocker_token, mocker_close_cursor, mocker_close_connection, mocker_get_csv, 
+    mocker_process_csv, mocker_save_data, 
+) -> None:
+    
+    with app.test_request_context():
+        # Arrange
+        expected_message = (
+            'Não foi possível registrar sua(s) despesa(s), tente novamente'
+        )
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_not_called()
+        mocker_get_cursor.assert_not_called()
+        mocker_insert_csv.assert_not_called()
+        mocker_save_data.assert_not_called()
+        mocker_get_csv.assert_not_called()
+        mocker_process_csv.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_insert_user_expense_by_csv_should_raise_exception_if_connection_fails(
+    mocker_get_connection, mocker_get_cursor, app, mocker_insert_csv,
+    mocker_token, mocker_close_cursor, mocker_close_connection, mocker_get_csv, 
+    mocker_process_csv, mocker_save_data, mocker_csv_data, mocker_csv_id,
+    mocker_csv_path 
+) -> None:
+    
+    with app.test_request_context(json=mocker_csv_path):
+        # Arrange
+        mocker_csv_data['id'] = mocker_csv_id
+
+        db_conn = mocker_get_connection.return_value
+        mocker_get_connection.side_effect = OperationalError('Connection lost')
+        
+        expected_message = (
+            'Não foi possível registrar sua(s) despesa(s), tente novamente'
+        )
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_not_called()
+        mocker_insert_csv.assert_not_called()
+        mocker_save_data.assert_not_called()
+        mocker_get_csv.assert_not_called()
+        mocker_process_csv.assert_not_called()
+        db_conn.rollback.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_insert_user_expense_by_csv_should_raise_exception_if_cursor_fails(
+    mocker_get_connection, mocker_get_cursor, app, mocker_insert_csv,
+    mocker_token, mocker_close_cursor, mocker_close_connection, mocker_get_csv, 
+    mocker_process_csv, mocker_save_data, mocker_csv_data, mocker_csv_id,
+    mocker_csv_path 
+) -> None:
+    
+    with app.test_request_context(json=mocker_csv_path):
+        # Arrange
+        mocker_csv_data['id'] = mocker_csv_id
+
+        db_conn = mocker_get_connection.return_value
+        mocker_get_cursor.side_effect = OperationalError('Cursor lost')
+        
+        expected_message = (
+            'Não foi possível registrar sua(s) despesa(s), tente novamente'
+        )
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_insert_csv.assert_not_called()
+        mocker_save_data.assert_not_called()
+        mocker_get_csv.assert_not_called()
+        mocker_process_csv.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_insert_user_expense_by_csv_should_raise_exception_if_insert_csv_fails(
+    mocker_get_connection, mocker_get_cursor, app, mocker_insert_csv,
+    mocker_token, mocker_close_cursor, mocker_close_connection, mocker_get_csv, 
+    mocker_process_csv, mocker_save_data, mocker_csv_data, mocker_csv_id,
+    mocker_csv_path
+) -> None:
+    
+    with app.test_request_context(json=mocker_csv_path):
+        # Arrange
+        mocker_csv_data['id'] = mocker_csv_id
+
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+        
+        mocker_insert_csv.side_effect = IntegrityError('Constraint violation')
+        
+        expected_message = (
+            'Não foi possível registrar sua(s) despesa(s), tente novamente'
+        )
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        del mocker_csv_data['id']
+        
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_insert_csv.assert_called_once_with(
+            csv_data=mocker_csv_data,
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_not_called()
+        mocker_get_csv.assert_not_called()
+        mocker_process_csv.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_insert_user_expense_by_csv_should_raise_exception_if_save_data_fails(
+    mocker_get_connection, mocker_get_cursor, app, mocker_insert_csv,
+    mocker_token, mocker_close_cursor, mocker_close_connection, mocker_get_csv, 
+    mocker_process_csv, mocker_save_data, mocker_csv_data, mocker_csv_id,
+    mocker_csv_path
+) -> None:
+    
+    with app.test_request_context(json=mocker_csv_path):
+        # Arrange
+        mocker_csv_data['id'] = mocker_csv_id
+
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_save_data.side_effect = OperationalError('Connection lost')
+        
+        expected_message = (
+            'Não foi possível registrar sua(s) despesa(s), tente novamente'
+        )
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        del mocker_csv_data['id']
+
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_insert_csv.assert_called_once_with(
+            csv_data=mocker_csv_data,
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_not_called()
+        mocker_process_csv.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_insert_user_expense_by_csv_should_raise_exception_if_get_expense_fails(
+    mocker_get_connection, mocker_get_cursor, app, mocker_insert_csv,
+    mocker_token, mocker_close_cursor, mocker_close_connection, mocker_get_csv, 
+    mocker_process_csv, mocker_save_data, mocker_csv_data, mocker_csv_id,
+    mocker_csv_path
+) -> None:
+    
+    with app.test_request_context(json=mocker_csv_path):
+        # Arrange
+        mocker_csv_data['id'] = mocker_csv_id
+
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_csv.side_effect = OperationalError('Connection lost')
+        
+        expected_message = (
+            'Não foi possível registrar sua(s) despesa(s), tente novamente'
+        )
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        del mocker_csv_data['id']
+        
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_insert_csv.assert_called_once_with(
+            csv_data=mocker_csv_data,
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_called_once_with(
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_process_csv.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_insert_user_expense_by_csv_should_raise_exception_if_csv_not_found(
+    mocker_get_connection, mocker_get_cursor, app, mocker_insert_csv,
+    mocker_token, mocker_close_cursor, mocker_close_connection, mocker_get_csv, 
+    mocker_process_csv, mocker_save_data, mocker_csv_data, mocker_csv_id,
+    mocker_csv_path
+) -> None:
+    
+    with app.test_request_context(json=mocker_csv_path):
+        # Arrange
+        mocker_csv_data['id'] = mocker_csv_id
+
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_csv.return_value = None
+        
+        expected_message = (
+            'Não foi possível registrar sua(s) despesa(s), tente novamente'
+        )
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        del mocker_csv_data['id']
+        
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_insert_csv.assert_called_once_with(
+            csv_data=mocker_csv_data,
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_called_once_with(
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_process_csv.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_insert_user_expense_by_csv_should_raise_exception_if_process_csv_fails(
+    mocker_get_connection, mocker_get_cursor, app, mocker_insert_csv,
+    mocker_token, mocker_close_cursor, mocker_close_connection, mocker_get_csv, 
+    mocker_process_csv, mocker_save_data, mocker_csv_data, mocker_csv_id, 
+    mocker_csv_path
+) -> None:
+
+    mocker_csv_path['csv_path'] = 3
+    
+    with app.test_request_context(json=mocker_csv_path):
+        # Arrange
+        mocker_csv_data['id'] = mocker_csv_id
+
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_csv.return_value = mocker_csv_data
+
+        mocker_process_csv.delay.side_effect = ValueError('Invalid arguments')
+        
+        expected_message = (
+            'Não foi possível registrar sua(s) despesa(s), tente novamente'
+        )
+
+        # Act
+        response, status_code = await register_user_expense_by_csv(
+            request_token=mocker_token
+        )
+
+        # Assert
+        del mocker_csv_data['id']
+        
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_insert_csv.assert_called_once_with(
+            csv_data=mocker_csv_data,
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_called_once_with(
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_process_csv.delay.assert_called_once_with(
+            csv_path=3,
+            csv_id=mocker_csv_id,
+            user_id=mocker_token['sub']
+        )
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )

@@ -13,6 +13,16 @@ services:
       - ./migrations:/docker-entrypoint-initdb.d
       - mysql_data:/var/lib/mysql
   
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE}
+    container_name: ${CONTAINER_RABBITMQ_NAME}
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - '${RABBITMQ_PORT_INTERFACE}:${RABBITMQ_PORT_INTERFACE}'
+      - '${RABBITMQ_PORT_AMQP}:${RABBITMQ_PORT_AMQP}'
+  
   api:
     build: .
     container_name: ${CONTAINER_API_NAME}
@@ -24,6 +34,24 @@ services:
       - '.:/app'
     depends_on:
       - db
+      - rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    
+
+  celery:
+    build: .
+    container_name: ${CONTAINER_CELERY_NAME}
+    command: sh -c 'celery -A app.celery worker --loglevel=info'
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
+    volumes:
+      - '.:/app'
+    depends_on:
+      - db
+      - rabbitmq
 
 volumes:
   mysql_data:

@@ -6,6 +6,7 @@ from app.repo.database import (
     close_connection, 
     close_cursor
 )
+from app.repo.csv_repo import insert_csv, get_csv_after_insert_csv
 from app.repo.expense_repo import (
     insert_expense, 
     get_expenses, 
@@ -13,7 +14,8 @@ from app.repo.expense_repo import (
     update_expense,
     delete_expense
 )
-from datetime import datetime
+from datetime import datetime, timezone
+from tasks.csv_tasks import process_csv
 
 
 async def manually_enter_expense(request_token):
@@ -231,8 +233,7 @@ async def manually_update_expense(request_token, header_expense_id):
 
         return {'success_message': 'Despesa atualizada com sucesso'}, 200
 
-    except Exception as error:
-        print(error)
+    except Exception:
         if db_conn:
             db_conn.rollback()
         return {
@@ -285,6 +286,67 @@ async def delete_user_expense(request_token, header_expense_id):
             db_conn.rollback()
         return {
             'error_message': 'Erro ao deletar despesa, tente novamente'
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+
+
+async def register_user_expense_by_csv(request_token):
+    db_conn = None
+    db_cursor = None
+    try:
+        request_csv_path = request.get_json()
+
+        if not request_csv_path or not request_token:
+            raise ValueError('CSV path and access token is required')
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        csv_data = {
+            'user_id': int(request_token['sub']),
+            'status': 'pendente',
+            'attached_at': datetime.now(tz=timezone.utc).date(),
+            'valid': False
+        }
+
+        insert_csv(
+            csv_data=csv_data, 
+            db_cursor=db_cursor
+        )
+
+        save_data(db_conn=db_conn)
+
+        db_csv = get_csv_after_insert_csv(
+            user_id=int(request_token['sub']), 
+            db_cursor=db_cursor
+        )
+
+        if not db_csv:
+            raise ValueError('CSV not found')
+
+        process_csv.delay(
+            csv_path=request_csv_path['csv_path'], 
+            csv_id=db_csv['id'], 
+            user_id=int(request_token['sub'])
+        )
+
+        return {
+            'success_message': 'Despesa(s) cadastrada(s) com sucesso'
+        }, 201
+
+    except Exception:
+        if db_conn:
+            db_conn.rollback()
+        
+        return {
+            'error_message': (
+                'Não foi possível registrar sua(s) despesa(s), tente novamente'
+            )
         }, 400
 
     finally:

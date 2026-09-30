@@ -30,6 +30,9 @@ celerybeat.pid
 .DS_Store
 Thumbs.db
 
+# Uploads
+uploads/
+
 # IDE
 #.idea/
 #.vscode/
