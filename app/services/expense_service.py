@@ -6,7 +6,7 @@ from app.repo.database import (
     close_connection, 
     close_cursor
 )
-from app.repo.csv_repo import insert_csv, get_csv_after_insert_csv
+from app.repo.csv_repo import insert_csv
 from app.repo.expense_repo import (
     insert_expense, 
     get_expenses, 
@@ -16,6 +16,8 @@ from app.repo.expense_repo import (
 )
 from datetime import datetime, timezone
 from tasks.csv_tasks import process_csv
+from werkzeug.utils import secure_filename
+import os
 
 
 async def manually_enter_expense(request_token):
@@ -299,10 +301,22 @@ async def register_user_expense_by_csv(request_token):
     db_conn = None
     db_cursor = None
     try:
-        request_csv_path = request.get_json()
+        request_files = request.files
 
-        if not request_csv_path or not request_token:
+        if not request_files or not request_token:
             raise ValueError('CSV path and access token is required')
+
+        if not request_files.get('file'):
+            raise ValueError('CSV file is required')
+
+        csv_file = request_files['file']
+
+        filename = secure_filename(csv_file.filename)
+
+        if not filename.endswith('.csv'):
+            raise ValueError('Invalid file')
+
+        os.makedirs('uploads', exist_ok=True)
 
         db_conn = get_connection()
         db_cursor = get_cursor(db_conn=db_conn)
@@ -315,34 +329,36 @@ async def register_user_expense_by_csv(request_token):
         }
 
         insert_csv(
-            csv_data=csv_data, 
+            csv_data=csv_data,
             db_cursor=db_cursor
         )
+
+        csv_id = db_cursor.lastrowid
+
+        if not csv_id:
+            raise ValueError('CSV id not generated')
+
+        unique_filename = f'{csv_id}_{filename}'
+        csv_path = os.path.join('uploads', unique_filename)
+
+        csv_file.save(csv_path)
 
         save_data(db_conn=db_conn)
 
-        db_csv = get_csv_after_insert_csv(
-            user_id=int(request_token['sub']), 
-            db_cursor=db_cursor
-        )
-
-        if not db_csv:
-            raise ValueError('CSV not found')
-
         process_csv.delay(
-            csv_path=request_csv_path['csv_path'], 
-            csv_id=db_csv['id'], 
+            csv_path=csv_path,
+            csv_id=csv_id,
             user_id=int(request_token['sub'])
         )
 
         return {
-            'success_message': 'Despesa(s) cadastrada(s) com sucesso'
-        }, 201
+            'success_message': 'CSV recebido, processamento iniciado'
+        }, 202
 
     except Exception:
         if db_conn:
             db_conn.rollback()
-        
+
         return {
             'error_message': (
                 'Não foi possível registrar sua(s) despesa(s), tente novamente'

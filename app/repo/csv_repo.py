@@ -16,23 +16,6 @@ def insert_csv(csv_data: dict, db_cursor: MySQLCursorAbstract) -> None:
     ))
 
 
-def get_csv_after_insert_csv(
-    user_id: int, 
-    db_cursor: MySQLCursorAbstract
-) -> dict:
-
-    get_command = '''
-        SELECT * FROM attached_csvs
-        WHERE user_id = %s
-        ORDER BY id DESC
-        LIMIT 1
-    '''
-
-    db_cursor.execute(get_command, (user_id,))
-
-    return db_cursor.fetchone()
-
-
 def update_csv(csv_info: dict, db_cursor: MySQLCursorAbstract) -> None:
     
     update_command = '''
