@@ -16,6 +16,18 @@ def insert_csv(csv_data: dict, db_cursor: MySQLCursorAbstract) -> None:
     ))
 
 
+def get_csvs(user_id: int, db_cursor: MySQLCursorAbstract) -> list[dict]:
+
+    get_command = '''
+        SELECT * FROM attached_csvs
+        WHERE user_id = %s
+    '''
+
+    db_cursor.execute(get_command, (user_id,))
+
+    return db_cursor.fetchall()
+
+
 def update_csv(csv_info: dict, db_cursor: MySQLCursorAbstract) -> None:
     
     update_command = '''

@@ -1,4 +1,5 @@
-from datetime import datetime
+from app.services.csv_service import get_user_csvs
+from datetime import datetime, timezone
 from mysql.connector.errors import OperationalError, IntegrityError
 from tasks.csv_tasks import process_csv
 
@@ -122,6 +123,63 @@ def mocker_open(mocker):
     mocked_open = mocker.patch('tasks.csv_tasks.open')
 
     return mocked_open
+
+@pytest.fixture
+def mocker_get_csvs(mocker):
+    mocked_get_csvs = mocker.patch('app.services.csv_service.get_csvs')
+
+    return mocked_get_csvs
+
+@pytest.fixture
+def csvs():
+    return [
+        {
+            'id': 1,
+            'user_id': 1,
+            'status': 'sucesso',
+            'attached_at': datetime.now(tz=timezone.utc),
+            'valid': True
+        },
+        {
+            'id': 2,
+            'user_id': 1,
+            'status': 'erro',
+            'attached_at': datetime.now(tz=timezone.utc),
+            'valid': False
+        }
+    ]
+
+@pytest.fixture
+def mocker_get_connection_csv(mocker):
+    mocked_get_connection = mocker.patch(
+        'app.services.csv_service.get_connection'
+    )
+
+    return mocked_get_connection
+
+@pytest.fixture
+def mocker_get_cursor_csv(mocker):
+    mocked_get_cursor = mocker.patch(
+        'app.services.csv_service.get_cursor'
+    )
+
+    return mocked_get_cursor
+
+@pytest.fixture
+def mocker_close_connection_csv(mocker):
+    mocked_close_connection = mocker.patch(
+        'app.services.csv_service.close_connection'
+    )
+
+    return mocked_close_connection
+
+@pytest.fixture
+def mocker_close_cursor_csv(mocker):
+    mocked_close_cursor = mocker.patch(
+        'app.services.csv_service.close_cursor'
+    )
+
+    return mocked_close_cursor
 
 async def test_process_csv_verify_expected_behavior(
     mocker_get_connection, mocker_get_cursor, mocker_save_data, mocker_csv, 
@@ -609,3 +667,202 @@ async def test_process_csv_should_raise_exception_if_insert_expense_by_csv_fails
     assert mocker_save_data.call_count == 2
     mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
     mocker_close_connection.assert_called_once_with(db_conn=db_conn)
+
+
+async def test_get_user_scvs_verify_expected_behavior(
+    mocker_get_connection_csv, mocker_get_cursor_csv,
+    mocker_close_connection_csv, csvs, mocker_close_cursor_csv, mocker_token,
+    mocker_get_csvs
+) -> None:
+
+    # Arrange
+    db_conn = mocker_get_connection_csv.return_value
+    db_cursor = mocker_get_cursor_csv.return_value
+
+    mocker_get_csvs.return_value = csvs
+
+    expected_message = 'CSVs buscados com sucesso'
+
+    # Act
+    response, status_code = await get_user_csvs(
+        request_token=mocker_token
+    )
+
+    # Assert
+    assert expected_message == response['success_message']
+    assert csvs == response['csvs']
+    assert isinstance(response['csvs'], list)
+    assert status_code == 200
+
+    mocker_get_connection_csv.assert_called_once()
+    mocker_get_cursor_csv.assert_called_once_with(
+        db_conn=db_conn
+    )
+    mocker_get_csvs.assert_called_once_with(
+        user_id=mocker_token['sub'],
+        db_cursor=db_cursor
+    )
+    mocker_close_cursor_csv.assert_called_once_with(
+        db_cursor=db_cursor
+    )
+    mocker_close_connection_csv.assert_called_once_with(
+        db_conn=db_conn
+    )
+
+
+async def test_get_user_scvs_should_raise_exception_if_request_token_missing(
+    mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_get_csvs, mocker_close_cursor_csv, mocker_close_connection_csv
+) -> None:
+
+    # Arrange
+    expected_message = 'Não foi possível listar os CSVs, tente novamente'
+
+    # Act
+    response, status_code = await get_user_csvs(
+        request_token=None
+    )
+
+    # Assert
+    assert expected_message == response['error_message']
+    assert status_code == 400
+
+    mocker_get_connection_csv.assert_not_called()
+    mocker_get_cursor_csv.assert_not_called()
+    mocker_get_csvs.assert_not_called()
+    mocker_close_cursor_csv.assert_not_called()
+    mocker_close_connection_csv.assert_not_called()
+
+
+async def test_get_user_scvs_should_raise_exception_if_connection_fails(
+    mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_get_csvs, mocker_close_cursor_csv, mocker_close_connection_csv
+) -> None:
+
+    # Arrange
+    mocker_get_connection_csv.side_effect = OperationalError('Connection lost')
+
+    expected_message = 'Não foi possível listar os CSVs, tente novamente'
+
+    # Act
+    response, status_code = await get_user_csvs(
+        request_token=mocker_token
+    )
+
+    # Assert
+    assert expected_message == response['error_message']
+    assert status_code == 400
+
+    mocker_get_connection_csv.assert_called_once()
+    mocker_get_cursor_csv.assert_not_called()
+    mocker_get_csvs.assert_not_called()
+    mocker_close_cursor_csv.assert_not_called()
+    mocker_close_connection_csv.assert_not_called()
+
+
+async def test_get_user_scvs_should_raise_exception_if_cursor_fails(
+    mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_get_csvs, mocker_close_cursor_csv, mocker_close_connection_csv
+) -> None:
+
+    # Arrange
+    db_conn = mocker_get_connection_csv.return_value
+    
+    mocker_get_cursor_csv.side_effect = OperationalError('Cursor lost')
+
+    expected_message = 'Não foi possível listar os CSVs, tente novamente'
+
+    # Act
+    response, status_code = await get_user_csvs(
+        request_token=mocker_token
+    )
+
+    # Assert
+    assert expected_message == response['error_message']
+    assert status_code == 400
+
+    mocker_get_connection_csv.assert_called_once()
+    mocker_get_cursor_csv.assert_called_once_with(
+        db_conn=db_conn
+    )
+    mocker_get_csvs.assert_not_called()
+    mocker_close_cursor_csv.assert_not_called()
+    mocker_close_connection_csv.assert_called_once_with(
+        db_conn=db_conn
+    )
+
+
+async def test_get_user_scvs_should_raise_exception_if_get_csvs_fails(
+    mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_get_csvs, mocker_close_cursor_csv, mocker_close_connection_csv
+) -> None:
+
+    # Arrange
+    db_conn = mocker_get_connection_csv.return_value
+    db_cursor = mocker_get_cursor_csv.return_value
+    
+    mocker_get_csvs.side_effect = IntegrityError('Connection lost')
+
+    expected_message = 'Não foi possível listar os CSVs, tente novamente'
+
+    # Act
+    response, status_code = await get_user_csvs(
+        request_token=mocker_token
+    )
+
+    # Assert
+    assert expected_message == response['error_message']
+    assert status_code == 400
+
+    mocker_get_connection_csv.assert_called_once()
+    mocker_get_cursor_csv.assert_called_once_with(
+        db_conn=db_conn
+    )
+    mocker_get_csvs.assert_called_once_with(
+        user_id=mocker_token['sub'],
+        db_cursor=db_cursor
+    )
+    mocker_close_cursor_csv.assert_called_once_with(
+        db_cursor=db_cursor
+    )
+    mocker_close_connection_csv.assert_called_once_with(
+        db_conn=db_conn
+    )
+
+
+async def test_get_user_scvs_should_raise_exception_if_csv_not_found(
+    mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_get_csvs, mocker_close_cursor_csv, mocker_close_connection_csv
+) -> None:
+
+    # Arrange
+    db_conn = mocker_get_connection_csv.return_value
+    db_cursor = mocker_get_cursor_csv.return_value
+    
+    mocker_get_csvs.return_value = None
+
+    expected_message = 'Não foi possível listar os CSVs, nenhum CSV encontrado'
+
+    # Act
+    response, status_code = await get_user_csvs(
+        request_token=mocker_token
+    )
+
+    # Assert
+    assert expected_message == response['error_message']
+    assert status_code == 404
+
+    mocker_get_connection_csv.assert_called_once()
+    mocker_get_cursor_csv.assert_called_once_with(
+        db_conn=db_conn
+    )
+    mocker_get_csvs.assert_called_once_with(
+        user_id=mocker_token['sub'],
+        db_cursor=db_cursor
+    )
+    mocker_close_cursor_csv.assert_called_once_with(
+        db_cursor=db_cursor
+    )
+    mocker_close_connection_csv.assert_called_once_with(
+        db_conn=db_conn
+    )
