@@ -1,4 +1,4 @@
-from app.services.csv_service import get_user_csvs
+from app.services.csv_service import get_user_csvs, get_user_csv
 from datetime import datetime, timezone
 from mysql.connector.errors import OperationalError, IntegrityError
 from tasks.csv_tasks import process_csv
@@ -131,6 +131,23 @@ def mocker_get_csvs(mocker):
     return mocked_get_csvs
 
 @pytest.fixture
+def mocker_get_csv(mocker):
+    mocked_get_csv = mocker.patch('app.services.csv_service.get_csv')
+
+    return mocked_get_csv
+
+@pytest.fixture
+def csv():
+    return {
+        'id': 1,
+        'user_id': 1,
+        'status': 'sucesso',
+        'attached_at': datetime.now(tz=timezone.utc),
+        'valid': True
+    }
+    
+
+@pytest.fixture
 def csvs():
     return [
         {
@@ -180,6 +197,10 @@ def mocker_close_cursor_csv(mocker):
     )
 
     return mocked_close_cursor
+
+@pytest.fixture
+def mocker_request_csv_id():
+    return 1
 
 async def test_process_csv_verify_expected_behavior(
     mocker_get_connection, mocker_get_cursor, mocker_save_data, mocker_csv, 
@@ -832,7 +853,7 @@ async def test_get_user_scvs_should_raise_exception_if_get_csvs_fails(
 
 async def test_get_user_scvs_should_raise_exception_if_csv_not_found(
     mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
-    mocker_get_csvs, mocker_close_cursor_csv, mocker_close_connection_csv
+    mocker_get_csvs, mocker_close_cursor_csv, mocker_close_connection_csv,
 ) -> None:
 
     # Arrange
@@ -845,7 +866,7 @@ async def test_get_user_scvs_should_raise_exception_if_csv_not_found(
 
     # Act
     response, status_code = await get_user_csvs(
-        request_token=mocker_token
+        request_token=mocker_token,
     )
 
     # Assert
@@ -866,3 +887,228 @@ async def test_get_user_scvs_should_raise_exception_if_csv_not_found(
     mocker_close_connection_csv.assert_called_once_with(
         db_conn=db_conn
     )
+
+
+async def test_get_user_csv_verify_expected_behavior(
+    app, csv, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_get_csv
+) -> None:
+
+    with app.test_request_context():
+        
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+        db_cursor = mocker_get_cursor_csv.return_value
+
+        mocker_get_csv.return_value = csv
+
+        expected_message = 'CSV buscado com sucesso'
+
+        # Act
+        response, status_code = await get_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['success_message']
+        assert csv == response['csv']
+        assert status_code == 200
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_called_once_with(
+            csv_id=mocker_request_csv_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_close_cursor_csv.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_csv_should_raise_exception_if_request_token_or_request_csv_id_missing(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_get_csv,
+    
+) -> None:
+
+    with app.test_request_context():
+        
+        # Arrange
+        expected_message = 'Não foi possível listar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await get_user_csv(
+            request_token=mocker_token,
+            request_csv_id=None
+        )
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_not_called()
+        mocker_get_cursor_csv.assert_not_called()
+        mocker_get_csv.assert_not_called()
+        mocker_close_cursor_csv.assert_not_called()
+        mocker_close_connection_csv.assert_not_called()
+
+
+async def test_get_user_csv_should_return_error_if_get_connection_fails(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_get_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        mocker_get_connection_csv.side_effect = OperationalError(
+            'Connection lost'
+        )
+
+        expected_message = 'Não foi possível listar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await get_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_not_called()
+        mocker_get_csv.assert_not_called()
+        mocker_close_cursor_csv.assert_not_called()
+        mocker_close_connection_csv.assert_not_called()
+
+
+async def test_get_user_csv_should_return_error_if_get_cursor_fails(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_get_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+
+        mocker_get_cursor_csv.side_effect = OperationalError('Cursor lost')
+
+        expected_message = 'Não foi possível listar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await get_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_not_called()
+        mocker_close_cursor_csv.assert_not_called()
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_csv_should_return_error_if_get_csv_fails(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_get_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+        db_cursor = mocker_get_cursor_csv.return_value
+
+        mocker_get_csv.side_effect = IntegrityError('Connection lost')
+
+        expected_message = 'Não foi possível listar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await get_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_called_once_with(
+            csv_id=mocker_request_csv_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_close_cursor_csv.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_csv_should_return_error_if_csv_not_found(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_get_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+        db_cursor = mocker_get_cursor_csv.return_value
+
+        mocker_get_csv.return_value = None
+
+        expected_message = 'Não foi possível listar o CSV, CSV não encontrado'
+
+        # Act
+        response, status_code = await get_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 404
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_csv.assert_called_once_with(
+            csv_id=mocker_request_csv_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_close_cursor_csv.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+    

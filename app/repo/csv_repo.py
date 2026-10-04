@@ -28,6 +28,18 @@ def get_csvs(user_id: int, db_cursor: MySQLCursorAbstract) -> list[dict]:
     return db_cursor.fetchall()
 
 
+def get_csv(csv_id: int, user_id: int, db_cursor: MySQLCursorAbstract) -> dict:
+
+    get_command = '''
+        SELECT * FROM attached_csvs
+        WHERE id = %s AND user_id = %s
+    '''
+
+    db_cursor.execute(get_command, (csv_id, user_id))
+
+    return db_cursor.fetchone()
+
+
 def update_csv(csv_info: dict, db_cursor: MySQLCursorAbstract) -> None:
     
     update_command = '''
