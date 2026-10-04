@@ -1,4 +1,8 @@
-from app.services.csv_service import get_user_csvs, get_user_csv
+from app.services.csv_service import (
+    get_user_csvs, 
+    get_user_csv, 
+    delete_user_csv
+)
 from datetime import datetime, timezone
 from mysql.connector.errors import OperationalError, IntegrityError
 from tasks.csv_tasks import process_csv
@@ -201,6 +205,18 @@ def mocker_close_cursor_csv(mocker):
 @pytest.fixture
 def mocker_request_csv_id():
     return 1
+
+@pytest.fixture
+def mocker_delete_csv(mocker):
+    mocked_delete_csv = mocker.patch('app.services.csv_service.delete_csv')
+
+    return mocked_delete_csv
+
+@pytest.fixture
+def mocker_save_data_csv(mocker):
+    mocked_save_data = mocker.patch('app.services.csv_service.save_data')
+
+    return mocked_save_data
 
 async def test_process_csv_verify_expected_behavior(
     mocker_get_connection, mocker_get_cursor, mocker_save_data, mocker_csv, 
@@ -1112,3 +1128,289 @@ async def test_get_user_csv_should_return_error_if_csv_not_found(
             db_conn=db_conn
         )
     
+
+async def test_delete_user_csv_verify_expected_behavior(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_delete_csv, mocker_save_data_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+        db_cursor = mocker_get_cursor_csv.return_value
+
+        # Act
+        response, status_code = await delete_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert response == ''
+        assert status_code == 204
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_csv.assert_called_once_with(
+            csv_id=mocker_request_csv_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        db_conn.rollback.assert_not_called()
+        mocker_close_cursor_csv.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_csv_should_raise_exception_if_request_token_or_request_csv_id_missing(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_delete_csv,
+    mocker_save_data_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+
+        expected_message = 'Não foi possível deletar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_csv(
+            request_token=mocker_token,
+            request_csv_id=None
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_not_called()
+        mocker_get_cursor_csv.assert_not_called()
+        mocker_delete_csv.assert_not_called()
+        mocker_save_data_csv.assert_not_called()
+        db_conn.rollback.assert_not_called()
+        mocker_close_cursor_csv.assert_not_called()
+        mocker_close_connection_csv.assert_not_called()
+
+
+async def test_delete_user_csv_should_return_error_if_get_connection_fails(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_delete_csv, mocker_save_data_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+
+        mocker_get_connection_csv.side_effect = OperationalError(
+            'Connection lost'
+        )
+
+        expected_message = 'Não foi possível deletar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_not_called()
+        mocker_delete_csv.assert_not_called()
+        mocker_save_data_csv.assert_not_called()
+        db_conn.rollback.assert_not_called()
+        mocker_close_cursor_csv.assert_not_called()
+        mocker_close_connection_csv.assert_not_called()
+
+
+async def test_delete_user_csv_should_return_error_if_get_cursor_fails(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_delete_csv, mocker_save_data_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+
+        mocker_get_cursor_csv.side_effect = OperationalError('Cursor lost')
+
+        expected_message = 'Não foi possível deletar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_csv.assert_not_called()
+        mocker_save_data_csv.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor_csv.assert_not_called()
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_csv_should_return_error_if_delete_csv_fails(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_delete_csv, mocker_save_data_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+        db_cursor = mocker_get_cursor_csv.return_value
+
+        mocker_delete_csv.side_effect = IntegrityError('Connection lost')
+
+        expected_message = 'Não é possível deletar uma despesa ligada a um CSV'
+
+        # Act
+        response, status_code = await delete_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 409
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_csv.assert_called_once_with(
+            csv_id=mocker_request_csv_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data_csv.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor_csv.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_csv_should_return_error_if_rollback_fails(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_delete_csv, mocker_save_data_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+        db_cursor = mocker_get_cursor_csv.return_value
+
+        mocker_delete_csv.side_effect = IntegrityError('Constraint violation')
+        db_conn.rollback.side_effect = OperationalError('Connection lost')
+
+        expected_message = 'Não foi possível deletar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_csv.assert_called_once_with(
+            csv_id=mocker_request_csv_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data_csv.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor_csv.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_csv_should_return_error_if_save_data_fails(
+    app, mocker_get_connection_csv, mocker_get_cursor_csv, mocker_token,
+    mocker_close_connection_csv, mocker_close_cursor_csv, mocker_request_csv_id,
+    mocker_delete_csv, mocker_save_data_csv
+) -> None:
+
+    with app.test_request_context():
+
+        # Arrange
+        db_conn = mocker_get_connection_csv.return_value
+        db_cursor = mocker_get_cursor_csv.return_value
+
+        mocker_save_data_csv.side_effect = OperationalError('Commit failed')
+
+        expected_message = 'Não foi possível deletar o CSV, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_csv(
+            request_token=mocker_token,
+            request_csv_id=mocker_request_csv_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection_csv.assert_called_once()
+        mocker_get_cursor_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_csv.assert_called_once_with(
+            csv_id=mocker_request_csv_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data_csv.assert_called_once_with(
+            db_conn=db_conn
+        )
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor_csv.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection_csv.assert_called_once_with(
+            db_conn=db_conn
+        )

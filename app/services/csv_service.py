@@ -1,10 +1,12 @@
-from app.repo.csv_repo import get_csvs, get_csv
+from app.repo.csv_repo import get_csvs, get_csv, delete_csv
 from app.repo.database import (
     get_connection,
     get_cursor,
+    save_data,
     close_connection, 
     close_cursor
 )
+from mysql.connector.errors import IntegrityError
 
 
 async def get_user_csvs(request_token) -> dict:
@@ -85,6 +87,64 @@ async def get_user_csv(request_token, request_csv_id) -> dict:
         }, 400
 
     finally:   
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+
+
+async def delete_user_csv(request_token, request_csv_id) -> None:
+    db_conn = None
+    db_cursor = None
+
+    try:
+        if not request_token or not request_csv_id:
+            raise ValueError('request token and request_csv_id are required')
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        try:
+            delete_csv(
+                csv_id=request_csv_id, 
+                user_id=int(request_token['sub']),
+                db_cursor=db_cursor
+            )
+        except IntegrityError:
+            try:
+                if db_conn:
+                    db_conn.rollback()
+            except Exception:
+                return {
+                    'error_message': (
+                        'Não foi possível deletar o CSV, tente novamente'
+                    )
+                }, 400 
+            
+            return {
+                'error_message': (
+                    'Não é possível deletar uma despesa ligada a um CSV'
+                )
+            }, 409
+
+        save_data(db_conn=db_conn)
+
+        return '', 204
+    
+    except Exception:
+        try:
+            if db_conn:
+                db_conn.rollback()
+        except Exception:
+            return {
+                'error_message': 'Não foi possível deletar o CSV, tente novamente'
+            }, 400 
+        
+        return {
+            'error_message': 'Não foi possível deletar o CSV, tente novamente'
+        }, 400
+
+    finally:
         if db_cursor:
             close_cursor(db_cursor=db_cursor)
         if db_conn:

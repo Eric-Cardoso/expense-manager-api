@@ -56,3 +56,17 @@ def update_csv(csv_info: dict, db_cursor: MySQLCursorAbstract) -> None:
         csv_info['csv_id'],
         csv_info['user_id']
     ))
+
+
+def delete_csv(
+    csv_id: int, 
+    user_id: int,
+    db_cursor: MySQLCursorAbstract
+) -> None:
+
+    delete_command = '''
+        DELETE FROM attached_csvs
+        WHERE id = %s AND user_id = %s
+    '''
+
+    db_cursor.execute(delete_command, (csv_id, user_id))
