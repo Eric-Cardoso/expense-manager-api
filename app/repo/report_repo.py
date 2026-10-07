@@ -47,3 +47,19 @@ def get_reports(user_id: int, db_cursor: MySQLCursorAbstract) -> list[dict]:
     db_cursor.execute(get_command, (user_id,))
 
     return db_cursor.fetchall()
+
+
+def get_report(
+    report_id: int, 
+    user_id: int, 
+    db_cursor: MySQLCursorAbstract
+) -> dict:
+
+    get_command = '''
+        SELECT * FROM reports
+        WHERE id = %s AND user_id = %s
+    '''
+
+    db_cursor.execute(get_command, (report_id, user_id))
+
+    return db_cursor.fetchone()
