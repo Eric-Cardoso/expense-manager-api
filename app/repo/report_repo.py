@@ -35,3 +35,15 @@ def generate_report(
         calc_expenses.get('overdue_expenses'),
         current_date
     ))
+
+
+def get_reports(user_id: int, db_cursor: MySQLCursorAbstract) -> list[dict]:
+
+    get_command = '''
+        SELECT * FROM reports
+        WHERE user_id = %s
+    '''
+
+    db_cursor.execute(get_command, (user_id,))
+
+    return db_cursor.fetchall()

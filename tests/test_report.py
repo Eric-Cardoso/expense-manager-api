@@ -1,7 +1,10 @@
-from datetime import date, timezone
+from datetime import date, timezone, datetime
 from decimal import Decimal
 
-from app.services.report_service import generate_expenses_report
+from app.services.report_service import (
+    generate_expenses_report, 
+    get_user_reports
+)
 from mysql.connector.errors import OperationalError, IntegrityError
 import pytest
 
@@ -94,6 +97,37 @@ def mocker_generate_report(mocker):
     )
 
     return mocked_generate_report
+
+@pytest.fixture
+def mocker_get_reports(mocker):
+    mocked_get_reports = mocker.patch('app.services.report_service.get_reports')
+
+    return mocked_get_reports
+
+@pytest.fixture
+def reports():
+    reports_data = [
+        {
+            'id': 2,
+            'user_id': 1,
+            'total_value': Decimal('7950.50'),
+            'total_expenses': 3,
+            'settled_expenses': 1,
+            'overdue_expenses': 0,
+            'created_at': datetime(2026, 10, 7, 0, 0, 0)
+        },
+        {
+            'id': 1,
+            'user_id': 1,
+            'total_value': Decimal('2500.00'),
+            'total_expenses': 1,
+            'settled_expenses': 0,
+            'overdue_expenses': 1,
+            'created_at': datetime(2026, 10, 6, 0, 0, 0)
+        }
+    ]
+
+    return reports_data
 
 
 async def test_generate_expenses_report_verify_expected_behavior(
@@ -490,6 +524,212 @@ async def test_generate_expenses_report_should_return_error_if_rollback_fails(
         )
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once_with()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_reports_verify_expected_behavior(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor, reports,
+    mocker_close_connection, mocker_close_cursor, mocker_get_reports
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_reports.return_value = reports
+
+        expected_message = 'Relatórios buscados com sucesso'
+
+        # Act
+        response, status_code = await get_user_reports(
+            request_token=mocker_token
+        )
+
+        # Assert
+        assert expected_message == response['success_message']
+        assert reports == response['reports']
+        assert isinstance(response['reports'], list)
+        assert status_code == 200
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_reports.assert_called_once_with(
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_reports_should_raise_exception_if_request_token_missing(
+    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_get_reports
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        expected_message = 'Não foi possível buscar os relatórios, tente novamente'
+
+        # Act
+        response, status_code = await get_user_reports(
+            request_token=None
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_not_called()
+        mocker_get_cursor.assert_not_called()
+        mocker_get_reports.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_get_user_reports_should_return_error_if_get_connection_fails(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_get_reports
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        mocker_get_connection.side_effect = OperationalError('Connection lost')
+
+        expected_message = 'Não foi possível buscar os relatórios, tente novamente'
+
+        # Act
+        response, status_code = await get_user_reports(
+            request_token=mocker_token
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_not_called()
+        mocker_get_reports.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_get_user_reports_should_return_error_if_get_cursor_fails(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_get_reports
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+
+        mocker_get_cursor.side_effect = OperationalError('Cursor lost')
+
+        expected_message = 'Não foi possível buscar os relatórios, tente novamente'
+
+        # Act
+        response, status_code = await get_user_reports(
+            request_token=mocker_token
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_reports.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_reports_should_return_error_if_get_reports_fails(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_get_reports
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_reports.side_effect = OperationalError('Query failed')
+
+        expected_message = 'Não foi possível buscar os relatórios, tente novamente'
+
+        # Act
+        response, status_code = await get_user_reports(
+            request_token=mocker_token
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_reports.assert_called_once_with(
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_reports_should_return_error_if_reports_not_found(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_get_reports
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_reports.return_value = None
+
+        expected_message = (
+            'Não foi possível buscar os relatórios, nenhum relatório encontrado'
+        )
+
+        # Act
+        response, status_code = await get_user_reports(
+            request_token=mocker_token
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 404
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_reports.assert_called_once_with(
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
         mocker_close_cursor.assert_called_once_with(
             db_cursor=db_cursor
         )
