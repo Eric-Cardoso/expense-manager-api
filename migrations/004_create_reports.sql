@@ -6,7 +6,6 @@ CREATE TABLE IF NOT EXISTS reports (
     settled_expenses INTEGER NOT NULL,
     overdue_expenses INTEGER NOT NULL,
     created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL,
     
     CONSTRAINT fk_report_user FOREIGN KEY (user_id)
     REFERENCES users(id)

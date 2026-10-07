@@ -97,6 +97,28 @@ def get_expense(
     return db_cursor.fetchone()
 
 
+def get_calc_expenses(user_id: int, db_cursor: MySQLCursorAbstract) -> dict:
+
+    get_command = '''
+        SELECT
+            SUM(value) AS total_value,
+            COUNT(id) AS total_expenses,
+            COUNT(IF(status = %s, id, NULL)) AS settled_expenses,
+            COUNT(IF(status = %s, id, NULL)) AS overdue_expenses
+        FROM expenses
+        WHERE user_id = %s
+        GROUP BY user_id
+    '''
+
+    db_cursor.execute(get_command, (
+        'quitado',
+        'atrasado',
+        user_id
+    ))
+
+    return db_cursor.fetchone()
+
+
 def update_expense(
     expense_data: dict, 
     expense_id: int, 

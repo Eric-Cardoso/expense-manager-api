@@ -1,0 +1,72 @@
+from app.repo.database import (
+    get_connection,
+    get_cursor,
+    save_data,
+    close_connection, 
+    close_cursor
+)
+from app.repo.expense_repo import get_calc_expenses
+from app.repo.report_repo import generate_report
+from datetime import datetime, timezone
+
+
+async def generate_expenses_report(request_token) -> dict:
+    db_conn = None
+    db_cursor = None
+
+    try:
+        if not request_token:
+            raise ValueError('request_token is required')
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        db_calc_expenses = get_calc_expenses(
+            user_id=int(request_token['sub']), 
+            db_cursor=db_cursor
+        )
+
+        if not db_calc_expenses:
+            return {
+                'error_message': (
+                    'Não foi possível gerar o relatório, '
+                    'nenhuma despesa encontrada'
+                )
+            }, 404
+
+        generate_report(
+            calc_expenses=db_calc_expenses,
+            current_date=datetime.now(tz=timezone.utc).date(), 
+            user_id=int(request_token['sub']), 
+            db_cursor=db_cursor
+        )
+
+        save_data(db_conn=db_conn)
+
+        return {
+            'success_message': 'Relatório gerado com sucesso'
+        }, 201
+    
+    except Exception:
+        try:
+            if db_conn:
+                db_conn.rollback()
+        except Exception:
+            return {
+                'error_message': (
+                    'Não foi possível gerar o relatório, tente novamente'
+                )
+            }, 400 
+        
+        return {
+            'error_message': (
+                'Não foi possível gerar o relatório, tente novamente'
+            )
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+
