@@ -6,7 +6,12 @@ from app.repo.database import (
     close_cursor
 )
 from app.repo.expense_repo import get_calc_expenses
-from app.repo.report_repo import generate_report, get_reports, get_report
+from app.repo.report_repo import (
+    generate_report, 
+    get_reports, 
+    get_report,
+    delete_report
+)
 from datetime import datetime, timezone
 
 
@@ -148,6 +153,51 @@ async def get_user_report(request_token, request_report_id: int) -> dict:
         return {
             'error_message': (
                 'Não foi possível buscar o relatório, tente novamente'
+            )
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+
+
+async def delete_user_report(request_token, request_report_id: int) -> str:
+    db_conn = None
+    db_cursor = None
+
+    try:
+        if not request_token or not request_report_id:
+            raise ValueError('request token and request report id are required')
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        delete_report(
+            report_id=request_report_id,
+            user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        save_data(db_conn=db_conn)
+
+        return '', 204
+
+    except Exception:
+        try:
+            if db_conn:
+                db_conn.rollback()
+        except Exception:
+            return {
+                'error_message': (
+                    'Não foi possível deletar o relatório, tente novamente'
+                )
+            }, 400 
+        
+        return {
+            'error_message': (
+                'Não foi possível deletar o relatório, tente novamente'
             )
         }, 400
 

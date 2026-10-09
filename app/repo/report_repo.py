@@ -63,3 +63,17 @@ def get_report(
     db_cursor.execute(get_command, (report_id, user_id))
 
     return db_cursor.fetchone()
+
+
+def delete_report(
+    report_id: int, 
+    user_id: int, 
+    db_cursor: MySQLCursorAbstract
+) -> None:
+
+    delete_command = '''
+        DELETE FROM reports
+        WHERE id = %s AND user_id = %s
+    '''
+
+    db_cursor.execute(delete_command, (report_id, user_id))

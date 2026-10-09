@@ -4,7 +4,8 @@ from decimal import Decimal
 from app.services.report_service import (
     generate_expenses_report, 
     get_user_reports,
-    get_user_report
+    get_user_report,
+    delete_user_report
 )
 from mysql.connector.errors import OperationalError, IntegrityError
 import pytest
@@ -147,6 +148,15 @@ def mocker_get_report(mocker):
     mocked_get_report = mocker.patch('app.services.report_service.get_report')
 
     return mocked_get_report
+
+
+@pytest.fixture
+def mocker_delete_report(mocker):
+    mocked_delete_report = mocker.patch(
+        'app.services.report_service.delete_report'
+    )
+
+    return mocked_delete_report
 
 @pytest.fixture
 def mocker_report_id():
@@ -972,6 +982,282 @@ async def test_get_user_report_should_return_error_if_report_not_found(
             user_id=mocker_token['sub'],
             db_cursor=db_cursor
         )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_report_verify_expected_behavior(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_delete_report, 
+    mocker_report_id, mocker_save_data
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        # Act
+        response, status_code = await delete_user_report(
+            request_token=mocker_token,
+            request_report_id=mocker_report_id
+        )
+
+        # Assert
+        assert response == ''
+        assert status_code == 204
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_report.assert_called_once_with(
+            report_id=mocker_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        db_conn.rollback.assert_not_called()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_report_should_raise_exception_if_request_token_or_report_id_missing(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_delete_report,
+    mocker_save_data
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        expected_message = 'Não foi possível deletar o relatório, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_report(
+            request_token=mocker_token,
+            request_report_id=None
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_not_called()
+        mocker_get_cursor.assert_not_called()
+        mocker_delete_report.assert_not_called()
+        mocker_save_data.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_delete_user_report_should_raise_exception_if_connection_fails(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_delete_report,
+    mocker_report_id, mocker_save_data
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        mocker_get_connection.side_effect = OperationalError('Connection lost')
+
+        expected_message = 'Não foi possível deletar o relatório, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_report(
+            request_token=mocker_token,
+            request_report_id=mocker_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_not_called()
+        mocker_delete_report.assert_not_called()
+        mocker_save_data.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_delete_user_report_should_raise_exception_if_cursor_fails(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_delete_report,
+    mocker_report_id, mocker_save_data
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+
+        mocker_get_cursor.side_effect = OperationalError('Cursor lost')
+
+        expected_message = 'Não foi possível deletar o relatório, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_report(
+            request_token=mocker_token,
+            request_report_id=mocker_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_report.assert_not_called()
+        mocker_save_data.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_report_should_raise_exception_if_delete_report_fails(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_delete_report,
+    mocker_report_id, mocker_save_data
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_delete_report.side_effect = IntegrityError(
+            'Invalid report ID'
+        )
+
+        expected_message = 'Não foi possível deletar o relatório, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_report(
+            request_token=mocker_token,
+            request_report_id=mocker_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_report.assert_called_once_with(
+            report_id=mocker_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_report_should_raise_exception_if_save_data_fails(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_delete_report,
+    mocker_report_id, mocker_save_data
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_save_data.side_effect = OperationalError('Connection lost')
+
+        expected_message = 'Não foi possível deletar o relatório, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_report(
+            request_token=mocker_token,
+            request_report_id=mocker_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_report.assert_called_once_with(
+            report_id=mocker_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_report_should_raise_exception_if_rollback_fails(
+    app, mocker_token, mocker_get_connection, mocker_get_cursor,
+    mocker_close_connection, mocker_close_cursor, mocker_delete_report,
+    mocker_report_id, mocker_save_data
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_save_data.side_effect = OperationalError('Connection lost')
+        db_conn.rollback.side_effect = OperationalError('Rollback failed')
+
+        expected_message = 'Não foi possível deletar o relatório, tente novamente'
+
+        # Act
+        response, status_code = await delete_user_report(
+            request_token=mocker_token,
+            request_report_id=mocker_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_report.assert_called_once_with(
+            report_id=mocker_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        db_conn.rollback.assert_called_once()
         mocker_close_cursor.assert_called_once_with(
             db_cursor=db_cursor
         )

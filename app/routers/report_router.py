@@ -3,7 +3,8 @@ from app.auth.decorators import login_required
 from app.services.report_service import (
     generate_expenses_report, 
     get_user_reports, 
-    get_user_report
+    get_user_report,
+    delete_user_report
 )
 
 route_report_bp = Blueprint('report', __name__, url_prefix='/reports')
@@ -25,6 +26,15 @@ async def route_get_user_reports(request_token) -> list[dict]:
 @login_required
 async def route_get_user_report(request_token, report_id) -> dict:
     return await get_user_report(
+        request_token=request_token,
+        request_report_id=report_id
+    )
+
+
+@route_report_bp.route('/<int:report_id>', methods=['DELETE'])
+@login_required
+async def route_delete_user_report(request_token, report_id) -> dict:
+    return await delete_user_report(
         request_token=request_token,
         request_report_id=report_id
     )
