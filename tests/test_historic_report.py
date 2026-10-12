@@ -1,6 +1,7 @@
 from app.services.historic_report_service import (
     generate_user_historic_reports, 
-    get_user_historic_reports
+    get_user_historic_reports, 
+    get_user_historic_report
 )
 from datetime import timezone, datetime
 from mysql.connector.errors import OperationalError, IntegrityError
@@ -154,6 +155,18 @@ def mocker_get_historic_reports(mocker):
     )
 
     return mocked_get_historic_reports
+
+@pytest.fixture
+def mocker_historic_report_id():
+    return 1
+
+@pytest.fixture
+def mocker_get_historic_report(mocker):
+    mocked_get_historic_report = mocker.patch(
+        'app.services.historic_report_service.get_historic_report'
+    )
+
+    return mocked_get_historic_report
 
 
 def test_generate_user_historic_reports_verify_expected_behavior(
@@ -719,6 +732,235 @@ async def test_get_user_historic_reports_should_return_error_if_historic_reports
             db_conn=db_conn
         )
         mocker_get_historic_reports.assert_called_once_with(
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_historic_report_verify_expected_behavior(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection, 
+    mocker_close_cursor, mocker_token, app, mocker_historic_report_id, 
+    mocker_get_historic_report
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        expected_message = 'Histórico de relatório buscado com sucesso'
+
+        # Act
+        response, status_code = await get_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['success_message']
+        assert status_code == 200
+        
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_historic_report.assert_called_once_with(
+            historic_report_id=mocker_historic_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_historic_report_should_return_error_if_request_token_or_request_historic_report_id_missing(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_get_historic_report, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        expected_message = (
+            'Não foi possível buscar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await get_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=None
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_not_called()
+        mocker_get_cursor.assert_not_called()
+        mocker_get_historic_report.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_get_user_historic_report_should_return_error_if_get_connection_fails(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_get_historic_report, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        mocker_get_connection.side_effect = OperationalError('Connection lost')
+
+        expected_message = (
+            'Não foi possível buscar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await get_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_not_called()
+        mocker_get_historic_report.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_get_user_historic_report_should_return_error_if_get_cursor_fails(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_get_historic_report, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+
+        mocker_get_cursor.side_effect = OperationalError('Cursor lost')
+
+        expected_message = (
+            'Não foi possível buscar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await get_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_historic_report.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_historic_report_should_return_error_if_get_historic_report_fails(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_get_historic_report, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_historic_report.side_effect = OperationalError('Query failed')
+
+        expected_message = (
+            'Não foi possível buscar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await get_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_historic_report.assert_called_once_with(
+            historic_report_id=mocker_historic_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_get_user_historic_report_should_return_error_if_historic_report_not_found(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_get_historic_report, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_get_historic_report.return_value = None
+
+        expected_message = (
+            'Não foi possível buscar o histórico de relatório, '
+            'histórico não encontrado'
+        )
+
+        # Act
+        response, status_code = await get_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 404
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_get_historic_report.assert_called_once_with(
+            historic_report_id=mocker_historic_report_id,
             user_id=mocker_token['sub'],
             db_cursor=db_cursor
         )

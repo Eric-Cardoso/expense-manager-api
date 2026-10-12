@@ -7,7 +7,9 @@ from app.repo.database import (
 )
 from app.repo.historic_report_repo import (
     get_historic_reports_data, 
-    generate_historic_reports, get_historic_reports
+    generate_historic_reports, 
+    get_historic_reports,
+    get_historic_report
 )
 from datetime import datetime, timezone, timedelta
 from dateutil.relativedelta import relativedelta
@@ -104,6 +106,57 @@ async def get_user_historic_reports(request_token) -> list[dict]:
         return {
             'error_message': (
                 'Não foi possível buscar os históricos de relatórios, '
+                'tente novamente'
+            )
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+
+
+async def get_user_historic_report(
+    request_token, 
+    request_historic_report_id
+) -> dict:
+    
+    db_conn = None
+    db_cursor = None
+    
+    try:
+        if not request_token or not request_historic_report_id:
+            raise ValueError(
+                'request token and request_historic_report_id are required'
+            )
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        db_historic_report = get_historic_report(
+            historic_report_id=request_historic_report_id,
+            user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        if not db_historic_report:
+            return {
+                'error_message': (
+                    'Não foi possível buscar o histórico de relatório, '
+                    'histórico não encontrado'
+                )
+            }, 404
+
+        return {
+            'success_message': 'Histórico de relatório buscado com sucesso',
+            'historic_report': db_historic_report
+        }, 200
+
+    except Exception:
+        return {
+            'error_message': (
+                'Não foi possível buscar o histórico de relatório, '
                 'tente novamente'
             )
         }, 400

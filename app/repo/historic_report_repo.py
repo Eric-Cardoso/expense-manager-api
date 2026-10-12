@@ -65,6 +65,7 @@ def generate_historic_reports(
         reports_data.get('generated_at'),
     ))
 
+
 def get_historic_reports(
     user_id: int, 
     db_cursor: MySQLCursorAbstract
@@ -78,3 +79,19 @@ def get_historic_reports(
     db_cursor.execute(get_command, (user_id,))
 
     return db_cursor.fetchall()
+
+
+def get_historic_report(
+    historic_report_id: int,
+    user_id: int, 
+    db_cursor: MySQLCursorAbstract
+) -> dict:
+
+    get_command = '''
+        SELECT * FROM historic_reports
+        WHERE id = %s AND user_id = %s
+    '''
+
+    db_cursor.execute(get_command, (historic_report_id, user_id))
+
+    return db_cursor.fetchone()
