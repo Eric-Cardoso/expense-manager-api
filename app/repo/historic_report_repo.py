@@ -64,3 +64,17 @@ def generate_historic_reports(
         reports_data.get('overdue_expenses'),
         reports_data.get('generated_at'),
     ))
+
+def get_historic_reports(
+    user_id: int, 
+    db_cursor: MySQLCursorAbstract
+) -> list[dict]:
+
+    get_command = '''
+        SELECT * FROM historic_reports
+        WHERE user_id = %s
+    '''
+
+    db_cursor.execute(get_command, (user_id,))
+
+    return db_cursor.fetchall()
