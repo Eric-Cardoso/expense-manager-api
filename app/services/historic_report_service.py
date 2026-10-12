@@ -9,7 +9,8 @@ from app.repo.historic_report_repo import (
     get_historic_reports_data, 
     generate_historic_reports, 
     get_historic_reports,
-    get_historic_report
+    get_historic_report,
+    delete_historic_report
 )
 from datetime import datetime, timezone, timedelta
 from dateutil.relativedelta import relativedelta
@@ -157,6 +158,59 @@ async def get_user_historic_report(
         return {
             'error_message': (
                 'Não foi possível buscar o histórico de relatório, '
+                'tente novamente'
+            )
+        }, 400
+
+    finally:
+        if db_cursor:
+            close_cursor(db_cursor=db_cursor)
+        if db_conn:
+            close_connection(db_conn=db_conn)
+
+
+async def delete_user_historic_report(
+    request_token, 
+    request_historic_report_id
+) -> None:
+    
+    db_conn = None
+    db_cursor = None
+    
+    try:
+        if not request_token or not request_historic_report_id:
+            raise ValueError(
+                'request token and request_historic_report_id are required'
+            )
+
+        db_conn = get_connection()
+        db_cursor = get_cursor(db_conn=db_conn)
+
+        delete_historic_report(
+            historic_report_id=request_historic_report_id,
+            user_id=int(request_token['sub']),
+            db_cursor=db_cursor
+        )
+
+        save_data(db_conn=db_conn)
+        
+        return '', 204
+
+    except Exception:
+        try:
+            if db_conn:
+                db_conn.rollback()
+        except Exception:
+            return {
+                'error_message': (
+                    'Não foi possível deletar o histórico de relatório, '
+                    'tente novamente'
+                )
+            }, 400
+
+        return {
+            'error_message': (
+                'Não foi possível deletar o histórico de relatório, '
                 'tente novamente'
             )
         }, 400

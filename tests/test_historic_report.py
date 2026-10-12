@@ -1,7 +1,8 @@
 from app.services.historic_report_service import (
     generate_user_historic_reports, 
     get_user_historic_reports, 
-    get_user_historic_report
+    get_user_historic_report,
+    delete_user_historic_report
 )
 from datetime import timezone, datetime
 from mysql.connector.errors import OperationalError, IntegrityError
@@ -167,6 +168,14 @@ def mocker_get_historic_report(mocker):
     )
 
     return mocked_get_historic_report
+
+@pytest.fixture
+def mocker_delete_historic_report(mocker):
+    mocked_delete_historic_report = mocker.patch(
+        'app.services.historic_report_service.delete_historic_report'
+    )
+
+    return mocked_delete_historic_report
 
 
 def test_generate_user_historic_reports_verify_expected_behavior(
@@ -964,6 +973,300 @@ async def test_get_user_historic_report_should_return_error_if_historic_report_n
             user_id=mocker_token['sub'],
             db_cursor=db_cursor
         )
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_historic_report_verify_expected_behavior(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection, 
+    mocker_close_cursor, mocker_token, app, mocker_historic_report_id,
+    mocker_delete_historic_report, mocker_save_data
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        # Act
+        response, status_code = await delete_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert response == ''
+        assert status_code == 204
+        
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_historic_report.assert_called_once_with(
+            historic_report_id=mocker_historic_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        db_conn.rollback.assert_not_called()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_historic_report_should_raise_exception_if_request_token_or_request_historic_report_id_missing(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_delete_historic_report,
+    mocker_save_data, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        expected_message = (
+            'Não foi possível deletar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await delete_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=None
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_not_called()
+        mocker_get_cursor.assert_not_called()
+        mocker_delete_historic_report.assert_not_called()
+        mocker_save_data.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_delete_user_historic_report_should_raise_exception_if_get_connection_fails(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_delete_historic_report, mocker_save_data, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        mocker_get_connection.side_effect = OperationalError('Connection lost')
+
+        expected_message = (
+            'Não foi possível deletar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await delete_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_not_called()
+        mocker_delete_historic_report.assert_not_called()
+        mocker_save_data.assert_not_called()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_not_called()
+
+
+async def test_delete_user_historic_report_should_raise_exception_if_get_cursor_fails(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_delete_historic_report, mocker_save_data, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+
+        mocker_get_cursor.side_effect = OperationalError('Cursor lost')
+
+        expected_message = (
+            'Não foi possível deletar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await delete_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_historic_report.assert_not_called()
+        mocker_save_data.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_not_called()
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_historic_report_should_raise_exception_if_delete_historic_report_fails(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_delete_historic_report, mocker_save_data, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_delete_historic_report.side_effect = OperationalError(
+            'Query failed'
+        )
+
+        expected_message = (
+            'Não foi possível deletar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await delete_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_historic_report.assert_called_once_with(
+            historic_report_id=mocker_historic_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_not_called()
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_historic_report_should_raise_exception_if_save_data_fails(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_delete_historic_report, mocker_save_data, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_save_data.side_effect = OperationalError('Commit failed')
+
+        expected_message = (
+            'Não foi possível deletar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await delete_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_historic_report.assert_called_once_with(
+            historic_report_id=mocker_historic_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_called_once_with(
+            db_conn=db_conn
+        )
+        db_conn.rollback.assert_called_once()
+        mocker_close_cursor.assert_called_once_with(
+            db_cursor=db_cursor
+        )
+        mocker_close_connection.assert_called_once_with(
+            db_conn=db_conn
+        )
+
+
+async def test_delete_user_historic_report_should_raise_exception_if_rollback_fails(
+    mocker_get_connection, mocker_get_cursor, mocker_close_connection,
+    mocker_close_cursor, mocker_token, mocker_historic_report_id,
+    mocker_delete_historic_report, mocker_save_data, app
+) -> None:
+
+    with app.test_request_context():
+        # Arrange
+        db_conn = mocker_get_connection.return_value
+        db_cursor = mocker_get_cursor.return_value
+
+        mocker_delete_historic_report.side_effect = OperationalError(
+            'Query failed'
+        )
+        db_conn.rollback.side_effect = OperationalError('Rollback failed')
+
+        expected_message = (
+            'Não foi possível deletar o histórico de relatório, '
+            'tente novamente'
+        )
+
+        # Act
+        response, status_code = await delete_user_historic_report(
+            request_token=mocker_token,
+            request_historic_report_id=mocker_historic_report_id
+        )
+
+        # Assert
+        assert expected_message == response['error_message']
+        assert status_code == 400
+
+        mocker_get_connection.assert_called_once()
+        mocker_get_cursor.assert_called_once_with(
+            db_conn=db_conn
+        )
+        mocker_delete_historic_report.assert_called_once_with(
+            historic_report_id=mocker_historic_report_id,
+            user_id=mocker_token['sub'],
+            db_cursor=db_cursor
+        )
+        mocker_save_data.assert_not_called()
+        db_conn.rollback.assert_called_once()
         mocker_close_cursor.assert_called_once_with(
             db_cursor=db_cursor
         )

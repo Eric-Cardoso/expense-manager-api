@@ -95,3 +95,17 @@ def get_historic_report(
     db_cursor.execute(get_command, (historic_report_id, user_id))
 
     return db_cursor.fetchone()
+
+
+def delete_historic_report(
+    historic_report_id: int,
+    user_id: int, 
+    db_cursor: MySQLCursorAbstract
+) -> None:
+
+    delete_command = '''
+        DELETE FROM historic_reports
+        WHERE id = %s AND user_id = %s
+    '''
+
+    db_cursor.execute(delete_command, (historic_report_id, user_id))
