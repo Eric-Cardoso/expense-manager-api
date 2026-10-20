@@ -1,18 +1,15 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
+from app.resources.common import docs_only
 from app.schemas.user_schema import (
     RegisterUserSchemaErrorResponse,
     RegisterUserSchemaRequest,
-    RegisterUserSchemaResponse
+    RegisterUserSchemaResponse,
 )
-from app.resources.common import docs_only
 
 user_bp = Blueprint(
-    'user_docs',
-    __name__,
-    url_prefix='/users',
-    description='Cadastro de usuários'
+    'user_docs', __name__, url_prefix='/users', description='Cadastro de usuários'
 )
 
 

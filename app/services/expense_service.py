@@ -1,23 +1,25 @@
+import os
+from datetime import datetime, timezone
+
 from flask import request
+from werkzeug.utils import secure_filename
+
+from app.repo.csv_repo import insert_csv
 from app.repo.database import (
+    close_connection,
+    close_cursor,
     get_connection,
     get_cursor,
     save_data,
-    close_connection, 
-    close_cursor
 )
-from app.repo.csv_repo import insert_csv
 from app.repo.expense_repo import (
-    insert_expense, 
-    get_expenses, 
-    get_expense, 
+    delete_expense,
+    get_expense,
+    get_expenses,
+    insert_expense,
     update_expense,
-    delete_expense
 )
-from datetime import datetime, timezone
 from tasks.csv_tasks import process_csv
-from werkzeug.utils import secure_filename
-import os
 
 
 async def manually_enter_expense(request_token):
@@ -27,9 +29,7 @@ async def manually_enter_expense(request_token):
         expense_data = request.get_json()
 
         if expense_data.get('csv_id'):
-            raise ValueError(
-                'This endpoint is only for manual expense entry'
-            )
+            raise ValueError('This endpoint is only for manual expense entry')
 
         if not expense_data.get('in_installments') and expense_data.get(
             'number_installments'
@@ -48,9 +48,7 @@ async def manually_enter_expense(request_token):
         if not expense_data.get('register_date') or not expense_data.get(
             'maturity_date'
         ):
-            raise ValueError(
-                'Register date and maturity date are required'
-            )
+            raise ValueError('Register date and maturity date are required')
 
         expense_data['user_id'] = int(request_token['sub'])
 
@@ -62,9 +60,7 @@ async def manually_enter_expense(request_token):
                 expense_data['maturity_date'], '%Y-%m-%d'
             )
         except ValueError:
-            raise ValueError(
-                'Dates must be in the YYYY-MM-DD format'
-            )
+            raise ValueError('Dates must be in the YYYY-MM-DD format')
 
         db_conn = get_connection()
         db_cursor = get_cursor(db_conn=db_conn)
@@ -73,17 +69,13 @@ async def manually_enter_expense(request_token):
 
         save_data(db_conn=db_conn)
 
-        return {
-            'success_message': 'Despesa registrada com sucesso'
-        }, 201
+        return {'success_message': 'Despesa registrada com sucesso'}, 201
 
     except Exception:
         if db_conn:
             db_conn.rollback()
         return {
-            'error_message': (
-                'Não foi possível registrar sua despesa, tente novamente'
-            )
+            'error_message': ('Não foi possível registrar sua despesa, tente novamente')
         }, 400
 
     finally:
@@ -101,8 +93,7 @@ async def get_user_expenses(request_token):
         db_cursor = get_cursor(db_conn=db_conn)
 
         user_expenses = get_expenses(
-            user_id=int(request_token['sub']),
-            db_cursor=db_cursor
+            user_id=int(request_token['sub']), db_cursor=db_cursor
         )
 
         if not user_expenses:
@@ -110,13 +101,11 @@ async def get_user_expenses(request_token):
 
         return {
             'success_message': 'Despesas encontradas com sucesso',
-            'expenses': user_expenses
+            'expenses': user_expenses,
         }, 200
 
     except Exception:
-        return {
-            'error_message': 'Erro ao buscar despesas, tente novamente'
-        }, 400
+        return {'error_message': 'Erro ao buscar despesas, tente novamente'}, 400
 
     finally:
         if db_cursor:
@@ -130,7 +119,7 @@ async def get_user_expense(request_token, header_expense_id):
     db_cursor = None
     try:
         if not header_expense_id:
-            raise ValueError('Expense ID missing') 
+            raise ValueError('Expense ID missing')
 
         db_conn = get_connection()
         db_cursor = get_cursor(db_conn=db_conn)
@@ -138,7 +127,7 @@ async def get_user_expense(request_token, header_expense_id):
         user_expense = get_expense(
             expense_id=header_expense_id,
             logged_in_user_id=int(request_token['sub']),
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
 
         if not user_expense:
@@ -146,13 +135,11 @@ async def get_user_expense(request_token, header_expense_id):
 
         return {
             'success_message': 'Despesa encontrada com sucesso',
-            'expense': user_expense
+            'expense': user_expense,
         }, 200
 
     except Exception:
-        return {
-            'error_message': 'Erro ao buscar despesa, tente novamente'
-        }, 400
+        return {'error_message': 'Erro ao buscar despesa, tente novamente'}, 400
 
     finally:
         if db_cursor:
@@ -171,9 +158,7 @@ async def manually_update_expense(request_token, header_expense_id):
             raise ValueError('Header expense id or expense data missing')
 
         if expense_data.get('csv_id'):
-            raise ValueError(
-                'This endpoint is only for manual expense entry'
-            )
+            raise ValueError('This endpoint is only for manual expense entry')
 
         if not expense_data.get('in_installments') and expense_data.get(
             'number_installments'
@@ -192,9 +177,7 @@ async def manually_update_expense(request_token, header_expense_id):
         if not expense_data.get('register_date') or not expense_data.get(
             'maturity_date'
         ):
-            raise ValueError(
-                'Register date and maturity date are required'
-            )
+            raise ValueError('Register date and maturity date are required')
 
         try:
             expense_data['register_date'] = datetime.strptime(
@@ -204,9 +187,7 @@ async def manually_update_expense(request_token, header_expense_id):
                 expense_data['maturity_date'], '%Y-%m-%d'
             )
         except ValueError:
-            raise ValueError(
-                'Dates must be in the YYYY-MM-DD format'
-            )
+            raise ValueError('Dates must be in the YYYY-MM-DD format')
 
         db_conn = get_connection()
         db_cursor = get_cursor(db_conn=db_conn)
@@ -214,21 +195,19 @@ async def manually_update_expense(request_token, header_expense_id):
         db_expense = get_expense(
             expense_id=header_expense_id,
             logged_in_user_id=int(request_token['sub']),
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
 
         if not db_expense:
             return {
-                'error_message': (
-                    'Erro ao atualizar despesa, despesa não encontrada'
-                )
+                'error_message': ('Erro ao atualizar despesa, despesa não encontrada')
             }, 404
 
         update_expense(
             expense_data=expense_data,
             expense_id=header_expense_id,
             logged_in_user_id=int(request_token['sub']),
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
 
         save_data(db_conn=db_conn)
@@ -238,16 +217,14 @@ async def manually_update_expense(request_token, header_expense_id):
     except Exception:
         if db_conn:
             db_conn.rollback()
-        return {
-            'error_message': 'Erro ao atualizar despesa, tente novamente'
-        }, 400
+        return {'error_message': 'Erro ao atualizar despesa, tente novamente'}, 400
 
     finally:
         if db_cursor:
             close_cursor(db_cursor=db_cursor)
         if db_conn:
             close_connection(db_conn=db_conn)
-        
+
 
 async def delete_user_expense(request_token, header_expense_id):
     db_conn = None
@@ -263,32 +240,28 @@ async def delete_user_expense(request_token, header_expense_id):
         db_expense = get_expense(
             expense_id=header_expense_id,
             logged_in_user_id=int(request_token['sub']),
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
 
         if not db_expense:
             return {
-                'error_message': (
-                    'Erro ao deletar despesa, despesa não encontrada'
-                )
+                'error_message': ('Erro ao deletar despesa, despesa não encontrada')
             }, 404
 
         delete_expense(
             expense_id=header_expense_id,
             logged_in_user_id=int(request_token['sub']),
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
 
-        save_data(db_conn=db_conn) 
+        save_data(db_conn=db_conn)
 
         return '', 204
 
     except Exception:
         if db_conn:
             db_conn.rollback()
-        return {
-            'error_message': 'Erro ao deletar despesa, tente novamente'
-        }, 400
+        return {'error_message': 'Erro ao deletar despesa, tente novamente'}, 400
 
     finally:
         if db_cursor:
@@ -325,13 +298,10 @@ async def register_user_expense_by_csv(request_token):
             'user_id': int(request_token['sub']),
             'status': 'pendente',
             'attached_at': datetime.now(tz=timezone.utc).date(),
-            'valid': False
+            'valid': False,
         }
 
-        insert_csv(
-            csv_data=csv_data,
-            db_cursor=db_cursor
-        )
+        insert_csv(csv_data=csv_data, db_cursor=db_cursor)
 
         csv_id = db_cursor.lastrowid
 
@@ -346,14 +316,10 @@ async def register_user_expense_by_csv(request_token):
         save_data(db_conn=db_conn)
 
         process_csv.delay(
-            csv_path=csv_path,
-            csv_id=csv_id,
-            user_id=int(request_token['sub'])
+            csv_path=csv_path, csv_id=csv_id, user_id=int(request_token['sub'])
         )
 
-        return {
-            'success_message': 'CSV recebido, processamento iniciado'
-        }, 202
+        return {'success_message': 'CSV recebido, processamento iniciado'}, 202
 
     except Exception:
         if db_conn:

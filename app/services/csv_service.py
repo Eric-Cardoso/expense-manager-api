@@ -1,12 +1,13 @@
-from app.repo.csv_repo import get_csvs, get_csv, delete_csv
+from mysql.connector.errors import IntegrityError
+
+from app.repo.csv_repo import delete_csv, get_csv, get_csvs
 from app.repo.database import (
+    close_connection,
+    close_cursor,
     get_connection,
     get_cursor,
     save_data,
-    close_connection, 
-    close_cursor
 )
-from mysql.connector.errors import IntegrityError
 
 
 async def get_user_csvs(request_token) -> dict:
@@ -21,10 +22,7 @@ async def get_user_csvs(request_token) -> dict:
         db_conn = get_connection()
         db_cursor = get_cursor(db_conn=db_conn)
 
-        db_csvs = get_csvs(
-            user_id=int(request_token['sub']), 
-            db_cursor=db_cursor
-        )
+        db_csvs = get_csvs(user_id=int(request_token['sub']), db_cursor=db_cursor)
 
         if not db_csvs:
             return {
@@ -33,11 +31,7 @@ async def get_user_csvs(request_token) -> dict:
                 )
             }, 404
 
-        return {
-            'success_message': 'CSVs buscados com sucesso',
-            'csvs': db_csvs
-        }, 200
-        
+        return {'success_message': 'CSVs buscados com sucesso', 'csvs': db_csvs}, 200
 
     except Exception:
         return {
@@ -54,7 +48,7 @@ async def get_user_csvs(request_token) -> dict:
 async def get_user_csv(request_token, request_csv_id) -> dict:
     db_conn = None
     db_cursor = None
-    
+
     try:
 
         if not request_token or not request_csv_id:
@@ -64,29 +58,22 @@ async def get_user_csv(request_token, request_csv_id) -> dict:
         db_cursor = get_cursor(db_conn=db_conn)
 
         db_csv = get_csv(
-            csv_id=request_csv_id, 
-            user_id=int(request_token['sub']), 
-            db_cursor=db_cursor
+            csv_id=request_csv_id,
+            user_id=int(request_token['sub']),
+            db_cursor=db_cursor,
         )
 
         if not db_csv:
             return {
-                'error_message': (
-                    'Não foi possível listar o CSV, CSV não encontrado'
-                )
+                'error_message': ('Não foi possível listar o CSV, CSV não encontrado')
             }, 404
 
-        return {
-            'success_message': 'CSV buscado com sucesso',
-            'csv': db_csv
-        }, 200
+        return {'success_message': 'CSV buscado com sucesso', 'csv': db_csv}, 200
 
     except Exception:
-        return {
-            'error_message': 'Não foi possível listar o CSV, tente novamente'
-        }, 400
+        return {'error_message': 'Não foi possível listar o CSV, tente novamente'}, 400
 
-    finally:   
+    finally:
         if db_cursor:
             close_cursor(db_cursor=db_cursor)
         if db_conn:
@@ -106,9 +93,9 @@ async def delete_user_csv(request_token, request_csv_id) -> None:
 
         try:
             delete_csv(
-                csv_id=request_csv_id, 
+                csv_id=request_csv_id,
                 user_id=int(request_token['sub']),
-                db_cursor=db_cursor
+                db_cursor=db_cursor,
             )
         except IntegrityError:
             try:
@@ -116,21 +103,17 @@ async def delete_user_csv(request_token, request_csv_id) -> None:
                     db_conn.rollback()
             except Exception:
                 return {
-                    'error_message': (
-                        'Não foi possível deletar o CSV, tente novamente'
-                    )
-                }, 400 
-            
+                    'error_message': ('Não foi possível deletar o CSV, tente novamente')
+                }, 400
+
             return {
-                'error_message': (
-                    'Não é possível deletar uma despesa ligada a um CSV'
-                )
+                'error_message': ('Não é possível deletar uma despesa ligada a um CSV')
             }, 409
 
         save_data(db_conn=db_conn)
 
         return '', 204
-    
+
     except Exception:
         try:
             if db_conn:
@@ -138,11 +121,9 @@ async def delete_user_csv(request_token, request_csv_id) -> None:
         except Exception:
             return {
                 'error_message': 'Não foi possível deletar o CSV, tente novamente'
-            }, 400 
-        
-        return {
-            'error_message': 'Não foi possível deletar o CSV, tente novamente'
-        }, 400
+            }, 400
+
+        return {'error_message': 'Não foi possível deletar o CSV, tente novamente'}, 400
 
     finally:
         if db_cursor:

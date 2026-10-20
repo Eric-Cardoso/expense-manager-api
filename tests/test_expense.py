@@ -1,16 +1,17 @@
-from app.services.expense_service import (
-    manually_enter_expense, 
-    get_user_expenses,
-    get_user_expense,
-    manually_update_expense,
-    delete_user_expense,
-    register_user_expense_by_csv
-)
-from datetime import datetime, timezone
-from mysql.connector.errors import OperationalError, IntegrityError
-
 import io
+from datetime import datetime, timezone
+
 import pytest
+from mysql.connector.errors import IntegrityError, OperationalError
+
+from app.services.expense_service import (
+    delete_user_expense,
+    get_user_expense,
+    get_user_expenses,
+    manually_enter_expense,
+    manually_update_expense,
+    register_user_expense_by_csv,
+)
 
 
 @pytest.fixture
@@ -23,52 +24,47 @@ def expense():
         'value': 2500,
         'in_installments': False,
         'register_date': '2008-02-12',
-        'maturity_date': '2008-02-12'
+        'maturity_date': '2008-02-12',
     }
 
     return expense_data
 
+
 @pytest.fixture
 def mocker_token(mocker):
-    token_data = {
-        'sub': 1,
-        'exp': mocker.ANY
-    }
+    token_data = {'sub': 1, 'exp': mocker.ANY}
 
     return token_data
 
+
 @pytest.fixture
 def mocker_strptime(mocker):
-    mocked_strptime = mocker.patch(
-        'app.services.expense_service.datetime'
-    )
+    mocked_strptime = mocker.patch('app.services.expense_service.datetime')
     mocked_strptime.strptime.return_value = datetime(2008, 2, 12)
 
     return mocked_strptime.strptime
 
+
 @pytest.fixture
 def mocker_get_connection(mocker):
-    mocked_get_connection = mocker.patch(
-        'app.services.expense_service.get_connection'
-    )
+    mocked_get_connection = mocker.patch('app.services.expense_service.get_connection')
 
     return mocked_get_connection
 
+
 @pytest.fixture
 def mocker_get_cursor(mocker):
-    mocked_get_cursor = mocker.patch(
-        'app.services.expense_service.get_cursor'
-    )
+    mocked_get_cursor = mocker.patch('app.services.expense_service.get_cursor')
 
     return mocked_get_cursor
 
+
 @pytest.fixture
 def mocker_save_data(mocker):
-    mocked_save_data = mocker.patch(
-        'app.services.expense_service.save_data'
-    )
+    mocked_save_data = mocker.patch('app.services.expense_service.save_data')
 
     return mocked_save_data
+
 
 @pytest.fixture
 def mocker_close_connection(mocker):
@@ -78,21 +74,20 @@ def mocker_close_connection(mocker):
 
     return mocked_close_connection
 
+
 @pytest.fixture
 def mocker_close_cursor(mocker):
-    mocked_close_cursor = mocker.patch(
-        'app.services.expense_service.close_cursor'
-    )
+    mocked_close_cursor = mocker.patch('app.services.expense_service.close_cursor')
 
     return mocked_close_cursor
 
+
 @pytest.fixture
 def mocker_insert_expense(mocker):
-    mocked_insert_expense = mocker.patch(
-        'app.services.expense_service.insert_expense'
-    )
+    mocked_insert_expense = mocker.patch('app.services.expense_service.insert_expense')
 
     return mocked_insert_expense
+
 
 @pytest.fixture
 def get_expense():
@@ -108,26 +103,25 @@ def get_expense():
         'in_installments': False,
         'number_installments': None,
         'register_date': '2008-02-12',
-        'maturity_date': '2008-02-12'
+        'maturity_date': '2008-02-12',
     }
 
     return expense_data
 
+
 @pytest.fixture
 def mocker_get_expenses(mocker):
-    mocked_get_user_expenses = mocker.patch(
-        'app.services.expense_service.get_expenses'
-    )
+    mocked_get_user_expenses = mocker.patch('app.services.expense_service.get_expenses')
 
     return mocked_get_user_expenses
 
+
 @pytest.fixture
 def mocker_get_expense(mocker):
-    mocked_get_user_expense = mocker.patch(
-        'app.services.expense_service.get_expense'
-    )
+    mocked_get_user_expense = mocker.patch('app.services.expense_service.get_expense')
 
     return mocked_get_user_expense
+
 
 @pytest.fixture
 def mocker_expense_id():
@@ -136,17 +130,14 @@ def mocker_expense_id():
 
 @pytest.fixture
 def mocker_update_expense(mocker):
-    mocked_update_expense = mocker.patch(
-        'app.services.expense_service.update_expense'
-    )
+    mocked_update_expense = mocker.patch('app.services.expense_service.update_expense')
 
     return mocked_update_expense
 
+
 @pytest.fixture
 def mocker_delete_expense(mocker):
-    mocked_delete_expense = mocker.patch(
-        'app.services.expense_service.delete_expense'
-    )
+    mocked_delete_expense = mocker.patch('app.services.expense_service.delete_expense')
 
     return mocked_delete_expense
 
@@ -167,42 +158,34 @@ def mocker_csv_data():
         'user_id': 1,
         'status': 'pendente',
         'attached_at': datetime.now(tz=timezone.utc).date(),
-        'valid': False
+        'valid': False,
     }
 
 
 @pytest.fixture
 def mocker_insert_csv(mocker):
-    mocked_insert_attached_csv = mocker.patch(
-        'app.services.expense_service.insert_csv'
-    )
+    mocked_insert_attached_csv = mocker.patch('app.services.expense_service.insert_csv')
 
     return mocked_insert_attached_csv
 
 
 @pytest.fixture
 def mocker_process_csv(mocker):
-    mocked_process_csv = mocker.patch(
-        'app.services.expense_service.process_csv'
-    )
+    mocked_process_csv = mocker.patch('app.services.expense_service.process_csv')
 
     return mocked_process_csv
 
 
 @pytest.fixture
 def mocker_makedirs(mocker):
-    mocked_makedirs = mocker.patch(
-        'app.services.expense_service.os.makedirs'
-    )
+    mocked_makedirs = mocker.patch('app.services.expense_service.os.makedirs')
 
     return mocked_makedirs
 
 
 @pytest.fixture
 def mocker_file_save(mocker):
-    mocked_file_save = mocker.patch(
-        'werkzeug.datastructures.FileStorage.save'
-    )
+    mocked_file_save = mocker.patch('werkzeug.datastructures.FileStorage.save')
 
     return mocked_file_save
 
@@ -213,9 +196,16 @@ def mocker_csv_id():
 
 
 async def test_register_expense_verify_expected_behavior(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_save_data, app, 
-    mocker_close_connection, mocker_close_cursor, mocker_insert_expense, 
-    mocker_token, mocker_strptime
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_save_data,
+    app,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_insert_expense,
+    mocker_token,
+    mocker_strptime,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -230,38 +220,33 @@ async def test_register_expense_verify_expected_behavior(
         expected_success_message = 'Despesa registrada com sucesso'
 
         # Act
-        response, status_code = await manually_enter_expense(
-            request_token=mocker_token
-        )
+        response, status_code = await manually_enter_expense(request_token=mocker_token)
 
         # Assert
         assert expected_success_message == response['success_message']
         assert status_code == 201
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_expense.assert_called_once_with(
-            expense_data=expense,
-            db_cursor=db_cursor
+            expense_data=expense, db_cursor=db_cursor
         )
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         db_conn.rollback.assert_not_called()
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
 
 
 async def test_register_expense_should_raise_exception_if_connection_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_save_data, app, 
-    mocker_close_connection, mocker_close_cursor, mocker_insert_expense,
-    mocker_token
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_save_data,
+    app,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_insert_expense,
+    mocker_token,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -274,9 +259,7 @@ async def test_register_expense_should_raise_exception_if_connection_fails(
         )
 
         # Act
-        response, status_code = await manually_enter_expense(
-            request_token=mocker_token
-        )
+        response, status_code = await manually_enter_expense(request_token=mocker_token)
 
         # Assert
         assert expected_error_message == response['error_message']
@@ -287,14 +270,20 @@ async def test_register_expense_should_raise_exception_if_connection_fails(
         mocker_insert_expense.assert_not_called()
         mocker_save_data.assert_not_called()
         mocker_get_connection.return_value.rollback.assert_not_called()
-        mocker_close_cursor.assert_not_called() 
+        mocker_close_cursor.assert_not_called()
         mocker_close_connection.assert_not_called()
 
 
 async def test_register_expense_should_raise_exception_if_cursor_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_save_data, app, 
-    mocker_close_connection, mocker_close_cursor, mocker_insert_expense,
-    mocker_token
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_save_data,
+    app,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_insert_expense,
+    mocker_token,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -308,31 +297,32 @@ async def test_register_expense_should_raise_exception_if_cursor_fails(
         )
 
         # Act
-        response, status_code = await manually_enter_expense(
-            request_token=mocker_token
-        )
+        response, status_code = await manually_enter_expense(request_token=mocker_token)
 
         # Assert
         assert expected_error_message == response['error_message']
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_expense.assert_not_called()
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once()
         mocker_close_cursor.assert_not_called()
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_register_expense_should_raise_exception_if_insert_expense_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_save_data, app, 
-    mocker_close_connection, mocker_close_cursor, mocker_insert_expense,
-    mocker_token, mocker_strptime
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_save_data,
+    app,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_insert_expense,
+    mocker_token,
+    mocker_strptime,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -344,45 +334,41 @@ async def test_register_expense_should_raise_exception_if_insert_expense_fails(
 
         db_conn = mocker_get_connection.return_value
         db_cursor = mocker_get_cursor.return_value
-        mocker_insert_expense.side_effect = IntegrityError(
-            'Constraint violation'
-        )
+        mocker_insert_expense.side_effect = IntegrityError('Constraint violation')
 
         expected_error_message = (
             'Não foi possível registrar sua despesa, tente novamente'
         )
 
         # Act
-        response, status_code = await manually_enter_expense(
-            request_token=mocker_token
-        )
+        response, status_code = await manually_enter_expense(request_token=mocker_token)
 
         # Assert
         assert expected_error_message == response['error_message']
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_expense.assert_called_once_with(
-            expense_data=expense,
-            db_cursor=db_cursor
+            expense_data=expense, db_cursor=db_cursor
         )
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_register_expense_should_raise_exception_if_save_data_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_save_data, app, 
-    mocker_close_connection, mocker_close_cursor, mocker_insert_expense,
-    mocker_token, mocker_strptime
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_save_data,
+    app,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_insert_expense,
+    mocker_token,
+    mocker_strptime,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -401,37 +387,32 @@ async def test_register_expense_should_raise_exception_if_save_data_fails(
         )
 
         # Act
-        response, status_code = await manually_enter_expense(
-            request_token=mocker_token
-        )
+        response, status_code = await manually_enter_expense(request_token=mocker_token)
 
         # Assert
         assert expected_error_message == response['error_message']
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_expense.assert_called_once_with(
-            expense_data=expense,
-            db_cursor=db_cursor
+            expense_data=expense, db_cursor=db_cursor
         )
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_get_expenses_verify_expected_behavior(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expenses, get_expense, mocker_token
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expenses,
+    get_expense,
+    mocker_token,
 ) -> None:
 
     with app.test_request_context():
@@ -443,33 +424,29 @@ async def test_get_expenses_verify_expected_behavior(
         expected_message = 'Despesas encontradas com sucesso'
 
         # Act
-        response, status_code = await get_user_expenses(
-            mocker_token
-        )
+        response, status_code = await get_user_expenses(mocker_token)
 
         # Assert
         assert expected_message == response['success_message']
         assert status_code == 200
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expenses.assert_called_once_with(
-            user_id=int(mocker_token['sub']),
-            db_cursor=db_cursor 
+            user_id=int(mocker_token['sub']), db_cursor=db_cursor
         )
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_get_expenses_should_raise_exception_if_connection_fails(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expenses, mocker_token
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expenses,
+    mocker_token,
 ) -> None:
 
     with app.test_request_context():
@@ -493,8 +470,13 @@ async def test_get_expenses_should_raise_exception_if_connection_fails(
 
 
 async def test_get_expenses_should_raise_exception_if_cursor_fails(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expenses, mocker_token
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expenses,
+    mocker_token,
 ) -> None:
 
     with app.test_request_context():
@@ -512,19 +494,20 @@ async def test_get_expenses_should_raise_exception_if_cursor_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expenses.assert_not_called()
         mocker_close_cursor.assert_not_called()
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_get_expenses_should_raise_exception_if_get_expenses_fails(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expenses, mocker_token
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expenses,
+    mocker_token,
 ) -> None:
 
     with app.test_request_context():
@@ -543,24 +526,22 @@ async def test_get_expenses_should_raise_exception_if_get_expenses_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expenses.assert_called_once_with(
-            user_id=int(mocker_token['sub']),
-            db_cursor=db_cursor
+            user_id=int(mocker_token['sub']), db_cursor=db_cursor
         )
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_get_expenses_should_raise_exception_if_user_expenses_not_found_fails(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expenses, mocker_token
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expenses,
+    mocker_token,
 ) -> None:
 
     with app.test_request_context():
@@ -579,25 +560,24 @@ async def test_get_expenses_should_raise_exception_if_user_expenses_not_found_fa
         assert status_code == 404
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expenses.assert_called_once_with(
-            user_id=int(mocker_token['sub']),
-            db_cursor=db_cursor
+            user_id=int(mocker_token['sub']), db_cursor=db_cursor
         )
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_get_expense_verify_expected_behavior(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expense, get_expense, mocker_token,
-    mocker_expense_id
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expense,
+    get_expense,
+    mocker_token,
+    mocker_expense_id,
 ) -> None:
 
     with app.test_request_context():
@@ -610,8 +590,7 @@ async def test_get_expense_verify_expected_behavior(
 
         # Act
         response, status_code = await get_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -619,25 +598,24 @@ async def test_get_expense_verify_expected_behavior(
         assert status_code == 200
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor 
+            db_cursor=db_cursor,
         )
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_get_expense_should_raise_exception_if_expense_id_missing(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expense, mocker_token
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expense,
+    mocker_token,
 ) -> None:
 
     with app.test_request_context():
@@ -645,10 +623,7 @@ async def test_get_expense_should_raise_exception_if_expense_id_missing(
         expected_message = 'Erro ao buscar despesa, tente novamente'
 
         # Act
-        response, status_code = await get_user_expense(
-            mocker_token,
-            None
-        )
+        response, status_code = await get_user_expense(mocker_token, None)
 
         # Assert
         assert expected_message == response['error_message']
@@ -662,8 +637,14 @@ async def test_get_expense_should_raise_exception_if_expense_id_missing(
 
 
 async def test_get_expense_should_raise_exception_if_connection_fails(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expense, mocker_token, mocker_expense_id
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expense,
+    mocker_token,
+    mocker_expense_id,
 ) -> None:
 
     with app.test_request_context():
@@ -674,8 +655,7 @@ async def test_get_expense_should_raise_exception_if_connection_fails(
 
         # Act
         response, status_code = await get_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -690,8 +670,14 @@ async def test_get_expense_should_raise_exception_if_connection_fails(
 
 
 async def test_get_expense_should_raise_exception_if_cursor_fails(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expense, mocker_token, mocker_expense_id
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expense,
+    mocker_token,
+    mocker_expense_id,
 ) -> None:
 
     with app.test_request_context():
@@ -703,8 +689,7 @@ async def test_get_expense_should_raise_exception_if_cursor_fails(
 
         # Act
         response, status_code = await get_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -712,19 +697,21 @@ async def test_get_expense_should_raise_exception_if_cursor_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_not_called()
         mocker_close_cursor.assert_not_called()
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_get_expense_should_raise_exception_if_get_expense_fails(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expense, mocker_token, mocker_expense_id
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expense,
+    mocker_token,
+    mocker_expense_id,
 ) -> None:
 
     with app.test_request_context():
@@ -737,8 +724,7 @@ async def test_get_expense_should_raise_exception_if_get_expense_fails(
 
         # Act
         response, status_code = await get_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -746,25 +732,25 @@ async def test_get_expense_should_raise_exception_if_get_expense_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor 
+            db_cursor=db_cursor,
         )
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_get_expense_should_raise_exception_if_expense_not_found(
-    app, mocker_get_connection, mocker_get_cursor, mocker_close_connection,
-    mocker_close_cursor, mocker_get_expense, mocker_token, mocker_expense_id
+    app,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_close_connection,
+    mocker_close_cursor,
+    mocker_get_expense,
+    mocker_token,
+    mocker_expense_id,
 ) -> None:
 
     with app.test_request_context():
@@ -777,34 +763,37 @@ async def test_get_expense_should_raise_exception_if_expense_not_found(
 
         # Act
         response, status_code = await get_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
         # Assert
         assert expected_message == response['error_message']
         assert status_code == 404
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor 
+            db_cursor=db_cursor,
         )
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_update_expense_verify_expected_behavior(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, get_expense, mocker_strptime, mocker_update_expense
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    get_expense,
+    mocker_strptime,
+    mocker_update_expense,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -821,8 +810,7 @@ async def test_update_expense_verify_expected_behavior(
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -830,36 +818,35 @@ async def test_update_expense_verify_expected_behavior(
         assert status_code == 200
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
         mocker_update_expense.assert_called_once_with(
             expense_data=expense,
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         db_conn.rollback.assert_not_called()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_update_expense_should_raise_exception_if_expense_id_or_expense_data_missing(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_update_expense
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_update_expense,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -868,8 +855,7 @@ async def test_update_expense_should_raise_exception_if_expense_id_or_expense_da
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=None
+            request_token=mocker_token, header_expense_id=None
         )
 
         # Assert
@@ -886,9 +872,17 @@ async def test_update_expense_should_raise_exception_if_expense_id_or_expense_da
 
 
 async def test_update_expense_should_raise_exception_if_expense_data_invalid_argument(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_update_expense
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_update_expense,
 ) -> None:
 
     # Arrange
@@ -899,8 +893,7 @@ async def test_update_expense_should_raise_exception_if_expense_data_invalid_arg
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -917,9 +910,18 @@ async def test_update_expense_should_raise_exception_if_expense_data_invalid_arg
 
 
 async def test_update_expense_should_raise_exception_if_connection_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_update_expense, mocker_strptime
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_update_expense,
+    mocker_strptime,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -933,8 +935,7 @@ async def test_update_expense_should_raise_exception_if_connection_fails(
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -951,9 +952,18 @@ async def test_update_expense_should_raise_exception_if_connection_fails(
 
 
 async def test_update_expense_should_raise_exception_if_cursor_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_update_expense, mocker_strptime
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_update_expense,
+    mocker_strptime,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -969,8 +979,7 @@ async def test_update_expense_should_raise_exception_if_cursor_fails(
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -978,23 +987,28 @@ async def test_update_expense_should_raise_exception_if_cursor_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_not_called()
         mocker_update_expense.assert_not_called()
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once()
         mocker_close_cursor.assert_not_called()
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_update_expense_should_raise_exception_if_get_expense_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_update_expense, mocker_strptime
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_update_expense,
+    mocker_strptime,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -1011,8 +1025,7 @@ async def test_update_expense_should_raise_exception_if_get_expense_fails(
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1020,29 +1033,32 @@ async def test_update_expense_should_raise_exception_if_get_expense_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
         mocker_update_expense.assert_not_called()
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_update_expense_should_raise_exception_if_expense_not_found(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_update_expense, mocker_strptime
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_update_expense,
+    mocker_strptime,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -1059,8 +1075,7 @@ async def test_update_expense_should_raise_exception_if_expense_not_found(
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1068,29 +1083,33 @@ async def test_update_expense_should_raise_exception_if_expense_not_found(
         assert status_code == 404
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
         mocker_update_expense.assert_not_called()
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_not_called()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_update_expense_should_raise_exception_if_update_expense_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_update_expense, mocker_strptime, get_expense
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_update_expense,
+    mocker_strptime,
+    get_expense,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -1102,16 +1121,13 @@ async def test_update_expense_should_raise_exception_if_update_expense_fails(
         db_cursor = mocker_get_cursor.return_value
         mocker_get_expense.return_value = get_expense
 
-        mocker_update_expense.side_effect = IntegrityError(
-            'Constraint violation'
-        )
+        mocker_update_expense.side_effect = IntegrityError('Constraint violation')
 
         expected_message = 'Erro ao atualizar despesa, tente novamente'
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1119,34 +1135,38 @@ async def test_update_expense_should_raise_exception_if_update_expense_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
         mocker_update_expense.assert_called_once_with(
             expense_data=expense,
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_update_expense_should_raise_exception_if_save_data_fails(
-    expense, mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_update_expense, mocker_strptime, get_expense
+    expense,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_update_expense,
+    mocker_strptime,
+    get_expense,
 ) -> None:
 
     with app.test_request_context(json=expense):
@@ -1164,8 +1184,7 @@ async def test_update_expense_should_raise_exception_if_save_data_fails(
 
         # Act
         response, status_code = await manually_update_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1173,49 +1192,48 @@ async def test_update_expense_should_raise_exception_if_save_data_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
         mocker_update_expense.assert_called_once_with(
             expense_data=expense,
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_delete_expense_verify_expected_behavior(
-    mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, get_expense, mocker_delete_expense      
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    get_expense,
+    mocker_delete_expense,
 ) -> None:
 
     with app.test_request_context():
         # Arrange
         db_conn = mocker_get_connection.return_value
         db_cursor = mocker_get_cursor.return_value
-        
+
         mocker_get_expense.return_value = get_expense
 
         # Act
         response, status_code = await delete_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1223,35 +1241,33 @@ async def test_delete_expense_verify_expected_behavior(
         assert status_code == 204
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
         mocker_delete_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         db_conn.rollback.assert_not_called()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_delete_expense_should_raise_exception_if_expense_id_missing(
-    mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_save_data, mocker_token, mocker_close_cursor,mocker_close_connection, 
-    mocker_delete_expense      
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_delete_expense,
 ) -> None:
 
     with app.test_request_context():
@@ -1260,8 +1276,7 @@ async def test_delete_expense_should_raise_exception_if_expense_id_missing(
 
         # Act
         response, status_code = await delete_user_expense(
-            request_token=mocker_token,
-            header_expense_id=None
+            request_token=mocker_token, header_expense_id=None
         )
 
         # Assert
@@ -1278,21 +1293,27 @@ async def test_delete_expense_should_raise_exception_if_expense_id_missing(
 
 
 async def test_delete_expense_should_raise_exception_if_connection_fails(
-    mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_delete_expense      
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_delete_expense,
 ) -> None:
 
     with app.test_request_context():
         # Arrange
         mocker_get_connection.side_effect = OperationalError('Connection lost')
-        
+
         expected_message = 'Erro ao deletar despesa, tente novamente'
 
         # Act
         response, status_code = await delete_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1309,9 +1330,16 @@ async def test_delete_expense_should_raise_exception_if_connection_fails(
 
 
 async def test_delete_expense_should_raise_exception_if_cursor_fails(
-    mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_delete_expense      
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_delete_expense,
 ) -> None:
 
     with app.test_request_context():
@@ -1319,13 +1347,12 @@ async def test_delete_expense_should_raise_exception_if_cursor_fails(
         db_conn = mocker_get_connection.return_value
 
         mocker_get_cursor.side_effect = OperationalError('Cursor lost')
-        
+
         expected_message = 'Erro ao deletar despesa, tente novamente'
 
         # Act
         response, status_code = await delete_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1333,23 +1360,26 @@ async def test_delete_expense_should_raise_exception_if_cursor_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_not_called()
         mocker_delete_expense.assert_not_called()
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once()
         mocker_close_cursor.assert_not_called()
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_delete_expense_should_raise_exception_if_get_expense_fails(
-    mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_delete_expense      
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_delete_expense,
 ) -> None:
 
     with app.test_request_context():
@@ -1358,13 +1388,12 @@ async def test_delete_expense_should_raise_exception_if_get_expense_fails(
         db_cursor = mocker_get_cursor.return_value
 
         mocker_get_expense.side_effect = IntegrityError('Connection lost')
-        
+
         expected_message = 'Erro ao deletar despesa, tente novamente'
 
         # Act
         response, status_code = await delete_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1372,29 +1401,30 @@ async def test_delete_expense_should_raise_exception_if_get_expense_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor    
+            db_cursor=db_cursor,
         )
         mocker_delete_expense.assert_not_called()
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_delete_expense_should_raise_exception_if_expense_not_found(
-    mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_delete_expense      
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_delete_expense,
 ) -> None:
 
     with app.test_request_context():
@@ -1403,13 +1433,12 @@ async def test_delete_expense_should_raise_exception_if_expense_not_found(
         db_cursor = mocker_get_cursor.return_value
 
         mocker_get_expense.return_value = None
-        
+
         expected_message = 'Erro ao deletar despesa, despesa não encontrada'
 
         # Act
         response, status_code = await delete_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1417,29 +1446,31 @@ async def test_delete_expense_should_raise_exception_if_expense_not_found(
         assert status_code == 404
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor    
+            db_cursor=db_cursor,
         )
         mocker_delete_expense.assert_not_called()
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_not_called()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_delete_expense_should_raise_exception_if_delete_expense_fails(
-    mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_delete_expense, get_expense      
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_delete_expense,
+    get_expense,
 ) -> None:
 
     with app.test_request_context():
@@ -1449,16 +1480,13 @@ async def test_delete_expense_should_raise_exception_if_delete_expense_fails(
 
         mocker_get_expense.return_value = get_expense
 
-        mocker_delete_expense.side_effect = IntegrityError(
-            'Invalid expense ID'
-        )
-        
+        mocker_delete_expense.side_effect = IntegrityError('Invalid expense ID')
+
         expected_message = 'Erro ao deletar despesa, tente novamente'
 
         # Act
         response, status_code = await delete_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1466,33 +1494,35 @@ async def test_delete_expense_should_raise_exception_if_delete_expense_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor    
+            db_cursor=db_cursor,
         )
         mocker_delete_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
         mocker_save_data.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_delete_expense_should_raise_exception_if_save_data_fails(
-    mocker_get_connection, mocker_get_cursor, mocker_get_expense, app,
-    mocker_expense_id, mocker_save_data, mocker_token, mocker_close_cursor,
-    mocker_close_connection, mocker_delete_expense, get_expense      
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_get_expense,
+    app,
+    mocker_expense_id,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_delete_expense,
+    get_expense,
 ) -> None:
 
     with app.test_request_context():
@@ -1503,13 +1533,12 @@ async def test_delete_expense_should_raise_exception_if_save_data_fails(
         mocker_get_expense.return_value = get_expense
 
         mocker_save_data.side_effect = OperationalError('Connection lost')
-        
+
         expected_message = 'Erro ao deletar despesa, tente novamente'
 
         # Act
         response, status_code = await delete_user_expense(
-            request_token=mocker_token,
-            header_expense_id=mocker_expense_id
+            request_token=mocker_token, header_expense_id=mocker_expense_id
         )
 
         # Assert
@@ -1517,36 +1546,39 @@ async def test_delete_expense_should_raise_exception_if_save_data_fails(
         assert status_code == 400
 
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_get_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor    
+            db_cursor=db_cursor,
         )
         mocker_delete_expense.assert_called_once_with(
             expense_id=mocker_expense_id,
             logged_in_user_id=mocker_token['sub'],
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_insert_user_expense_by_csv_verify_expected_behavior(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_csv_data, mocker_insert_csv, mocker_process_csv, mocker_makedirs,
-    mocker_file_save, mocker_csv_id, mocker_csv_path
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_csv_data,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
+    mocker_csv_id,
+    mocker_csv_path,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -1568,35 +1600,32 @@ async def test_insert_user_expense_by_csv_verify_expected_behavior(
 
         mocker_makedirs.assert_called_once_with('uploads', exist_ok=True)
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_csv.assert_called_once_with(
-            csv_data=mocker_csv_data,
-            db_cursor=db_cursor
+            csv_data=mocker_csv_data, db_cursor=db_cursor
         )
         mocker_file_save.assert_called_once_with(mocker_csv_path)
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         mocker_process_csv.delay.assert_called_once_with(
-            csv_path=mocker_csv_path,
-            csv_id=mocker_csv_id,
-            user_id=mocker_token['sub']
+            csv_path=mocker_csv_path, csv_id=mocker_csv_id, user_id=mocker_token['sub']
         )
         db_conn.rollback.assert_not_called()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_request_files_missing(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_insert_csv, mocker_process_csv, mocker_makedirs, mocker_file_save
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
 ) -> None:
 
     with app.test_request_context(method='POST'):
@@ -1627,9 +1656,17 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_request_file
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_request_token_missing(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_close_cursor, mocker_close_connection,
-    mocker_insert_csv, mocker_process_csv, mocker_makedirs, mocker_file_save
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -1639,9 +1676,7 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_request_toke
         )
 
         # Act
-        response, status_code = await register_user_expense_by_csv(
-            request_token=None
-        )
+        response, status_code = await register_user_expense_by_csv(request_token=None)
 
         # Assert
         assert expected_message == response['error_message']
@@ -1660,9 +1695,17 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_request_toke
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_file_key_missing(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_insert_csv, mocker_process_csv, mocker_makedirs, mocker_file_save
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
 ) -> None:
 
     data = {'other': (io.BytesIO(b'title,value'), 'gastos.csv')}
@@ -1695,9 +1738,17 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_file_key_mis
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_file_extension_invalid(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_insert_csv, mocker_process_csv, mocker_makedirs, mocker_file_save
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
 ) -> None:
 
     data = {'file': (io.BytesIO(b'title,value'), 'gastos.txt')}
@@ -1730,9 +1781,18 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_file_extensi
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_connection_fails(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_insert_csv, mocker_process_csv, mocker_makedirs, mocker_file_save
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -1766,9 +1826,18 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_connection_f
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_cursor_fails(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_insert_csv, mocker_process_csv, mocker_makedirs, mocker_file_save
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -1791,25 +1860,30 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_cursor_fails
 
         mocker_makedirs.assert_called_once_with('uploads', exist_ok=True)
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_csv.assert_not_called()
         mocker_file_save.assert_not_called()
         mocker_save_data.assert_not_called()
         mocker_process_csv.delay.assert_not_called()
         db_conn.rollback.assert_called_once()
         mocker_close_cursor.assert_not_called()
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_insert_csv_fails(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_csv_data, mocker_insert_csv, mocker_process_csv, mocker_makedirs,
-    mocker_file_save
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_csv_data,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -1834,30 +1908,32 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_insert_csv_f
 
         mocker_makedirs.assert_called_once_with('uploads', exist_ok=True)
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_csv.assert_called_once_with(
-            csv_data=mocker_csv_data,
-            db_cursor=db_cursor
+            csv_data=mocker_csv_data, db_cursor=db_cursor
         )
         mocker_file_save.assert_not_called()
         mocker_save_data.assert_not_called()
         mocker_process_csv.delay.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_csv_id_not_generated(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_csv_data, mocker_insert_csv, mocker_process_csv, mocker_makedirs,
-    mocker_file_save
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_csv_data,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -1881,30 +1957,34 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_csv_id_not_g
 
         mocker_makedirs.assert_called_once_with('uploads', exist_ok=True)
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_csv.assert_called_once_with(
-            csv_data=mocker_csv_data,
-            db_cursor=db_cursor
+            csv_data=mocker_csv_data, db_cursor=db_cursor
         )
         mocker_file_save.assert_not_called()
         mocker_save_data.assert_not_called()
         mocker_process_csv.delay.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_file_save_fails(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_csv_data, mocker_insert_csv, mocker_process_csv, mocker_makedirs,
-    mocker_file_save, mocker_csv_id, mocker_csv_path
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_csv_data,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
+    mocker_csv_id,
+    mocker_csv_path,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -1930,30 +2010,34 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_file_save_fa
 
         mocker_makedirs.assert_called_once_with('uploads', exist_ok=True)
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_csv.assert_called_once_with(
-            csv_data=mocker_csv_data,
-            db_cursor=db_cursor
+            csv_data=mocker_csv_data, db_cursor=db_cursor
         )
         mocker_file_save.assert_called_once_with(mocker_csv_path)
         mocker_save_data.assert_not_called()
         mocker_process_csv.delay.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_save_data_fails(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_csv_data, mocker_insert_csv, mocker_process_csv, mocker_makedirs,
-    mocker_file_save, mocker_csv_id, mocker_csv_path
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_csv_data,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
+    mocker_csv_id,
+    mocker_csv_path,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -1979,32 +2063,34 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_save_data_fa
 
         mocker_makedirs.assert_called_once_with('uploads', exist_ok=True)
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_csv.assert_called_once_with(
-            csv_data=mocker_csv_data,
-            db_cursor=db_cursor
+            csv_data=mocker_csv_data, db_cursor=db_cursor
         )
         mocker_file_save.assert_called_once_with(mocker_csv_path)
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         mocker_process_csv.delay.assert_not_called()
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)
 
 
 async def test_insert_user_expense_by_csv_should_raise_exception_if_process_csv_fails(
-    mocker_get_connection, mocker_get_cursor, app, mocker_save_data,
-    mocker_csv_file, mocker_token, mocker_close_cursor, mocker_close_connection,
-    mocker_csv_data, mocker_insert_csv, mocker_process_csv, mocker_makedirs,
-    mocker_file_save, mocker_csv_id, mocker_csv_path
+    mocker_get_connection,
+    mocker_get_cursor,
+    app,
+    mocker_save_data,
+    mocker_csv_file,
+    mocker_token,
+    mocker_close_cursor,
+    mocker_close_connection,
+    mocker_csv_data,
+    mocker_insert_csv,
+    mocker_process_csv,
+    mocker_makedirs,
+    mocker_file_save,
+    mocker_csv_id,
+    mocker_csv_path,
 ) -> None:
 
     with app.test_request_context(method='POST', data=mocker_csv_file):
@@ -2030,26 +2116,15 @@ async def test_insert_user_expense_by_csv_should_raise_exception_if_process_csv_
 
         mocker_makedirs.assert_called_once_with('uploads', exist_ok=True)
         mocker_get_connection.assert_called_once()
-        mocker_get_cursor.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_get_cursor.assert_called_once_with(db_conn=db_conn)
         mocker_insert_csv.assert_called_once_with(
-            csv_data=mocker_csv_data,
-            db_cursor=db_cursor
+            csv_data=mocker_csv_data, db_cursor=db_cursor
         )
         mocker_file_save.assert_called_once_with(mocker_csv_path)
-        mocker_save_data.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_save_data.assert_called_once_with(db_conn=db_conn)
         mocker_process_csv.delay.assert_called_once_with(
-            csv_path=mocker_csv_path,
-            csv_id=mocker_csv_id,
-            user_id=mocker_token['sub']
+            csv_path=mocker_csv_path, csv_id=mocker_csv_id, user_id=mocker_token['sub']
         )
         db_conn.rollback.assert_called_once()
-        mocker_close_cursor.assert_called_once_with(
-            db_cursor=db_cursor
-        )
-        mocker_close_connection.assert_called_once_with(
-            db_conn=db_conn
-        )
+        mocker_close_cursor.assert_called_once_with(db_cursor=db_cursor)
+        mocker_close_connection.assert_called_once_with(db_conn=db_conn)

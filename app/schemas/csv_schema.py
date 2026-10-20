@@ -11,8 +11,8 @@ class CsvUploadSchemaRequest(Schema):
         metadata={
             'type': 'string',
             'format': 'binary',
-            'description': 'Arquivo com extensão .csv'
-        }
+            'description': 'Arquivo com extensão .csv',
+        },
     )
 
 

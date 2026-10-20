@@ -20,7 +20,7 @@ htmlcov/
 .ruff_cache/
 
 # Celery
-celerybeat-schedule
+celerybeat-schedule*
 celerybeat.pid
 
 # Logs
@@ -33,7 +33,8 @@ Thumbs.db
 # Uploads
 uploads/
 
+# MkDocs build output
+site/
+
 # IDE
-#.idea/
-#.vscode/
 .vscode/

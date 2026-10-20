@@ -1,5 +1,6 @@
 from mysql.connector.abstracts import MySQLCursorAbstract
 
+
 def insert_token_data(token_data: dict, db_cursor: MySQLCursorAbstract) -> None:
     insert_command = '''
         INSERT INTO refresh_tokens (
@@ -8,13 +9,16 @@ def insert_token_data(token_data: dict, db_cursor: MySQLCursorAbstract) -> None:
         VALUES (%s, %s, %s, %s, %s)
     '''
 
-    db_cursor.execute(insert_command, (
-        token_data['user_id'],
-        token_data['token_hash'],
-        token_data['is_revoked'],
-        token_data['expiration_date'], 
-        token_data['created_at'],
-    )) 
+    db_cursor.execute(
+        insert_command,
+        (
+            token_data['user_id'],
+            token_data['token_hash'],
+            token_data['is_revoked'],
+            token_data['expiration_date'],
+            token_data['created_at'],
+        ),
+    )
 
 
 def get_user_token_data(
@@ -22,10 +26,10 @@ def get_user_token_data(
 ) -> dict | None:
 
     get_command = '''
-        SELECT 
-            user_id, 
-            token_hash, 
-            is_revoked 
+        SELECT
+            user_id,
+            token_hash,
+            is_revoked
         FROM refresh_tokens
         WHERE token_hash = %s
     '''
@@ -34,9 +38,8 @@ def get_user_token_data(
 
     return db_cursor.fetchone()
 
-def update_revoked_token(
-    hashed_token: str, db_cursor: MySQLCursorAbstract
-) -> None:
+
+def update_revoked_token(hashed_token: str, db_cursor: MySQLCursorAbstract) -> None:
 
     update_command = '''
         UPDATE refresh_tokens

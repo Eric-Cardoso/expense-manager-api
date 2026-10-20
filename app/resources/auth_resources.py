@@ -1,20 +1,17 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
+from app.resources.common import docs_only
 from app.schemas.auth_schema import (
     LoginSchemaRequest,
     LoginSchemaResponse,
     RenewSessionSchemaRequest,
-    RenewSessionSchemaResponse
+    RenewSessionSchemaResponse,
 )
 from app.schemas.common_schema import ErrorResponseSchema
-from app.resources.common import docs_only
 
 auth_bp = Blueprint(
-    'auth_docs',
-    __name__,
-    url_prefix='/auth',
-    description='Login e renovação de sessão'
+    'auth_docs', __name__, url_prefix='/auth', description='Login e renovação de sessão'
 )
 
 
@@ -25,7 +22,7 @@ class Login(MethodView):
     @auth_bp.alt_response(
         401,
         schema=ErrorResponseSchema,
-        description='Credenciais inválidas ou erro ao realizar o login'
+        description='Credenciais inválidas ou erro ao realizar o login',
     )
     def post(self, credentials):
         docs_only()
@@ -38,7 +35,7 @@ class RenewSession(MethodView):
     @auth_bp.alt_response(
         401,
         schema=ErrorResponseSchema,
-        description='Refresh token inválido, expirado ou já revogado'
+        description='Refresh token inválido, expirado ou já revogado',
     )
     def post(self, refresh_data):
         docs_only()

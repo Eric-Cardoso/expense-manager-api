@@ -1,28 +1,29 @@
+import hashlib
+import os
+from datetime import datetime, timedelta, timezone
+
+import jwt
+from dotenv import load_dotenv
 from flask import request
+
 from app.auth.auth_user import (
-    verify_password, 
-    generate_access_token, 
-    generate_refresh_token
-)
-from app.repo.database import (
-    get_connection, 
-    get_cursor,
-    save_data, 
-    close_connection, 
-    close_cursor
+    generate_access_token,
+    generate_refresh_token,
+    verify_password,
 )
 from app.repo.auth_repo import (
-    insert_token_data, 
-    get_user_token_data, 
-    update_revoked_token
+    get_user_token_data,
+    insert_token_data,
+    update_revoked_token,
+)
+from app.repo.database import (
+    close_connection,
+    close_cursor,
+    get_connection,
+    get_cursor,
+    save_data,
 )
 from app.repo.user_repo import get_user_by_email
-from datetime import datetime, timedelta, timezone
-from dotenv import load_dotenv
-import hashlib
-import jwt
-import os
-
 
 load_dotenv()
 
@@ -44,30 +45,25 @@ async def login_user() -> dict:
 
         db_cursor = get_cursor(db_conn=db_conn)
 
-        db_user = get_user_by_email(
-            user_email=data_user['email'], db_cursor=db_cursor
-        )
+        db_user = get_user_by_email(user_email=data_user['email'], db_cursor=db_cursor)
 
         if not db_user:
             raise ValueError('User not found')
 
         verify_password(
-            password_sent=data_user['password'], 
-            user_password=db_user['password_hash']
+            password_sent=data_user['password'], user_password=db_user['password_hash']
         )
 
         access_token = generate_access_token(
-            user_id=db_user['id'], 
-            access_token_expiration_time=int(
-                os.getenv('ACCESS_TOKEN_EXPIRATION_TIME')
-            )
+            user_id=db_user['id'],
+            access_token_expiration_time=int(os.getenv('ACCESS_TOKEN_EXPIRATION_TIME')),
         )
 
         refresh_token = generate_refresh_token(
             user_id=db_user['id'],
             refresh_token_expiration_time=int(
                 os.getenv('REFRESH_TOKEN_EXPIRATION_TIME')
-            )
+            ),
         )
 
         token_bytes = refresh_token.encode('utf-8')
@@ -79,7 +75,7 @@ async def login_user() -> dict:
             'token_hash': hashed_token,
             'is_revoked': False,
             'expiration_date': refresh_token_expiration_date,
-            'created_at': datetime.now(timezone.utc)
+            'created_at': datetime.now(timezone.utc),
         }
 
         insert_token_data(token_data=token_data, db_cursor=db_cursor)
@@ -90,9 +86,8 @@ async def login_user() -> dict:
             'success_message': 'Login realizado com sucesso',
             'token_type': 'Bearer',
             'access_token': access_token,
-            'refresh_token': refresh_token
+            'refresh_token': refresh_token,
         }, 200
-
 
     except Exception:
         return {
@@ -114,9 +109,9 @@ async def renew_user_session() -> dict:
         request_refresh_token = request.get_json()
 
         info_token = jwt.decode(
-            jwt=request_refresh_token['refresh_token'], 
-            key=os.getenv('SECRET_KEY'), 
-            algorithms=[os.getenv('ALGORITHM')]
+            jwt=request_refresh_token['refresh_token'],
+            key=os.getenv('SECRET_KEY'),
+            algorithms=[os.getenv('ALGORITHM')],
         )
 
         refresh_token_expiration_date = datetime.now(timezone.utc) + timedelta(
@@ -145,28 +140,26 @@ async def renew_user_session() -> dict:
 
         access_token = generate_access_token(
             user_id=user_token_data['user_id'],
-            access_token_expiration_time=int(os.getenv(
-                'ACCESS_TOKEN_EXPIRATION_TIME'
-            ))
+            access_token_expiration_time=int(os.getenv('ACCESS_TOKEN_EXPIRATION_TIME')),
         )
 
         refresh_token = generate_refresh_token(
             user_id=user_token_data['user_id'],
-            refresh_token_expiration_time=int(os.getenv(
-                'REFRESH_TOKEN_EXPIRATION_TIME'
-            ))
+            refresh_token_expiration_time=int(
+                os.getenv('REFRESH_TOKEN_EXPIRATION_TIME')
+            ),
         )
 
         hashed_new_refresh_token = hashlib.sha256(
-           refresh_token.encode('utf-8') 
+            refresh_token.encode('utf-8')
         ).hexdigest()
 
         token_data = {
             'user_id': user_token_data['user_id'],
             'token_hash': hashed_new_refresh_token,
             'is_revoked': False,
-            'expiration_date': refresh_token_expiration_date, 
-            'created_at': datetime.now(tz=timezone.utc)
+            'expiration_date': refresh_token_expiration_date,
+            'created_at': datetime.now(tz=timezone.utc),
         }
 
         insert_token_data(token_data=token_data, db_cursor=db_cursor)
@@ -180,14 +173,12 @@ async def renew_user_session() -> dict:
         return {
             'success_message': 'Sessão renovada com sucesso',
             'access_token': access_token,
-            'refresh_token': refresh_token
+            'refresh_token': refresh_token,
         }, 200
 
     except Exception:
         return {
-            'error_message': (
-                'Não foi possível renovar sua sessão, tente novamente'
-            )
+            'error_message': ('Não foi possível renovar sua sessão, tente novamente')
         }, 401
 
     finally:
@@ -195,7 +186,3 @@ async def renew_user_session() -> dict:
             close_connection(db_conn=db_conn)
         if db_cursor:
             close_cursor(db_cursor=db_cursor)
-
-
-
-    

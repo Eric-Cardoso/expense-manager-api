@@ -12,3 +12,11 @@ authors = [
 
 [tool.taskipy.tasks]
 run = 'python3 app.py'
+
+[tool.black]
+line-length = 88
+skip-string-normalization = true
+
+[tool.isort]
+profile = "black"
+line_length = 88

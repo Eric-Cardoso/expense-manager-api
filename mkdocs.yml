@@ -1,0 +1,59 @@
+site_name: Sistema de Gerenciamento de Gastos
+site_description: Documentação completa da API de gerenciamento de gastos mensais
+site_author: Eric Cardoso
+repo_url: https://github.com/Eric-Cardoso/expense-manager-api
+repo_name: Eric-Cardoso/expense-manager-api
+
+theme:
+  name: material
+  language: pt-BR
+  palette:
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Mudar para o tema claro
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Mudar para o tema escuro
+  features:
+    - navigation.sections
+    - navigation.top
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+nav:
+  - Início: index.md
+  - Primeiros passos:
+      - Instalação: getting-started/installation.md
+      - Primeira execução: getting-started/first-run.md
+  - Configuração do projeto: project-configuration.md
+  - Arquitetura:
+      - Visão geral: architecture/overview.md
+      - Camadas: architecture/layers.md
+      - Banco de dados: architecture/database.md
+      - Processamento de CSV: architecture/csv-processing.md
+  - Uso:
+      - Autenticação: usage/authentication.md
+      - Despesas: usage/expenses.md
+      - Envio de CSV: usage/csv-upload.md
+      - Relatórios: usage/reports.md
+  - Referência:
+      - Endpoints: reference/endpoints.md
+      - Módulos: reference/modules.md
+  - Qualidade de código: code-quality.md

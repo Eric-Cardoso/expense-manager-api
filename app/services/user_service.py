@@ -1,17 +1,19 @@
-from app.auth.auth_user import (
-    validate_user_email, 
-    validate_user_password, 
-    encrypt_password
-)
 from flask import request
+
+from app.auth.auth_user import (
+    encrypt_password,
+    validate_user_email,
+    validate_user_password,
+)
 from app.repo.database import (
+    close_connection,
+    close_cursor,
     get_connection,
     get_cursor,
-    close_connection, 
-    close_cursor, 
-    save_data
+    save_data,
 )
 from app.repo.user_repo import insert_user
+
 
 async def register_user() -> dict:
     db_conn = None
@@ -26,12 +28,10 @@ async def register_user() -> dict:
 
         validate_user_password(user_password=data_user['password'])
 
-        data_user['password'] = encrypt_password(
-            user_password=data_user['password']
-        )
+        data_user['password'] = encrypt_password(user_password=data_user['password'])
 
         db_conn = get_connection()
-        
+
         db_cursor = get_cursor(db_conn=db_conn)
 
         insert_user(data_user=data_user, db_cursor=db_cursor)

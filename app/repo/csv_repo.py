@@ -8,12 +8,15 @@ def insert_csv(csv_data: dict, db_cursor: MySQLCursorAbstract) -> None:
         VALUES (%s, %s, %s, %s)
     '''
 
-    db_cursor.execute(insert_command, (
-        csv_data['user_id'],
-        csv_data['status'],
-        csv_data['attached_at'],
-        csv_data['valid']
-    ))
+    db_cursor.execute(
+        insert_command,
+        (
+            csv_data['user_id'],
+            csv_data['status'],
+            csv_data['attached_at'],
+            csv_data['valid'],
+        ),
+    )
 
 
 def get_csvs(user_id: int, db_cursor: MySQLCursorAbstract) -> list[dict]:
@@ -41,28 +44,27 @@ def get_csv(csv_id: int, user_id: int, db_cursor: MySQLCursorAbstract) -> dict:
 
 
 def update_csv(csv_info: dict, db_cursor: MySQLCursorAbstract) -> None:
-    
+
     update_command = '''
         UPDATE attached_csvs
-        SET 
+        SET
             status = COALESCE(%s, status),
             valid = COALESCE(%s, valid)
         WHERE id = %s AND user_id = %s
     '''
 
-    db_cursor.execute(update_command, (
-        csv_info.get('status'),
-        csv_info.get('valid'),
-        csv_info['csv_id'],
-        csv_info['user_id']
-    ))
+    db_cursor.execute(
+        update_command,
+        (
+            csv_info.get('status'),
+            csv_info.get('valid'),
+            csv_info['csv_id'],
+            csv_info['user_id'],
+        ),
+    )
 
 
-def delete_csv(
-    csv_id: int, 
-    user_id: int,
-    db_cursor: MySQLCursorAbstract
-) -> None:
+def delete_csv(csv_id: int, user_id: int, db_cursor: MySQLCursorAbstract) -> None:
 
     delete_command = '''
         DELETE FROM attached_csvs

@@ -1,23 +1,20 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
-from app.schemas.common_schema import (
-    ErrorResponseSchema,
-    MessageResponseSchema
-)
+from app.resources.common import docs_only, protected
+from app.schemas.common_schema import ErrorResponseSchema, MessageResponseSchema
 from app.schemas.csv_schema import CsvUploadSchemaRequest
 from app.schemas.expense_schema import (
     ExpenseDetailSchemaResponse,
     ExpenseListSchemaResponse,
-    ExpenseSchemaRequest
+    ExpenseSchemaRequest,
 )
-from app.resources.common import docs_only, protected
 
 expense_bp = Blueprint(
     'expense_docs',
     __name__,
     url_prefix='/expenses',
-    description='Despesas do usuário logado'
+    description='Despesas do usuário logado',
 )
 
 

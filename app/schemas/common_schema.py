@@ -12,10 +12,8 @@ class ErrorResponseSchema(Schema):
 def http_date_field() -> fields.String:
     return fields.String(
         metadata={
-            'description': (
-                'Data no formato HTTP (serialização padrão do Flask)'
-            ),
-            'example': 'Sun, 18 Oct 2026 00:00:00 GMT'
+            'description': ('Data no formato HTTP (serialização padrão do Flask)'),
+            'example': 'Sun, 18 Oct 2026 00:00:00 GMT',
         }
     )
 

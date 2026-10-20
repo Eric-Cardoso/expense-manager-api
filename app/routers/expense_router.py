@@ -1,14 +1,14 @@
 from flask import Blueprint
+
 from app.auth.decorators import login_required
 from app.services.expense_service import (
-    manually_enter_expense, 
-    get_user_expenses,
-    get_user_expense,
-    manually_update_expense,
     delete_user_expense,
-    register_user_expense_by_csv
+    get_user_expense,
+    get_user_expenses,
+    manually_enter_expense,
+    manually_update_expense,
+    register_user_expense_by_csv,
 )
-
 
 route_expense_bp = Blueprint('expense', __name__, url_prefix='/expenses')
 
@@ -35,8 +35,7 @@ async def route_register_user_expense_by_csv(request_token) -> dict:
 @login_required
 async def route_get_user_expense(request_token, expense_id) -> dict:
     return await get_user_expense(
-        request_token=request_token, 
-        header_expense_id=expense_id
+        request_token=request_token, header_expense_id=expense_id
     )
 
 
@@ -44,8 +43,7 @@ async def route_get_user_expense(request_token, expense_id) -> dict:
 @login_required
 async def route_manually_update_expense(request_token, expense_id) -> dict:
     return await manually_update_expense(
-        request_token=request_token, 
-        header_expense_id=expense_id
+        request_token=request_token, header_expense_id=expense_id
     )
 
 
@@ -53,6 +51,5 @@ async def route_manually_update_expense(request_token, expense_id) -> dict:
 @login_required
 async def route_delete_user_expense(request_token, expense_id) -> dict:
     return await delete_user_expense(
-        request_token=request_token, 
-        header_expense_id=expense_id
+        request_token=request_token, header_expense_id=expense_id
     )

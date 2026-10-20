@@ -1,5 +1,6 @@
 from mysql.connector.abstracts import MySQLCursorAbstract
 
+
 def insert_expense(expense_data: dict, db_cursor: MySQLCursorAbstract) -> None:
     insert_command = '''
         INSERT INTO expenses (
@@ -18,56 +19,59 @@ def insert_expense(expense_data: dict, db_cursor: MySQLCursorAbstract) -> None:
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     '''
 
-    db_cursor.execute(insert_command, (
-        expense_data['user_id'],
-        None,
-        expense_data['title'],
-        expense_data['description'],
-        expense_data['category'],
-        expense_data['status'],
-        expense_data['value'],
-        expense_data['in_installments'],
-        expense_data.get('number_installments'),
-        expense_data['register_date'],
-        expense_data['maturity_date']
-    ))
+    db_cursor.execute(
+        insert_command,
+        (
+            expense_data['user_id'],
+            None,
+            expense_data['title'],
+            expense_data['description'],
+            expense_data['category'],
+            expense_data['status'],
+            expense_data['value'],
+            expense_data['in_installments'],
+            expense_data.get('number_installments'),
+            expense_data['register_date'],
+            expense_data['maturity_date'],
+        ),
+    )
 
 
-def insert_expense_by_csv(
-    expense_data: dict, 
-    db_cursor: MySQLCursorAbstract
-) -> None:
+def insert_expense_by_csv(expense_data: dict, db_cursor: MySQLCursorAbstract) -> None:
 
     insert_command = '''
         INSERT INTO expenses (
-            user_id, 
-            csv_id, 
-            title, 
-            description, 
-            category, 
-            status, 
-            value, 
-            in_installments, 
-            number_installments, 
-            register_date, 
+            user_id,
+            csv_id,
+            title,
+            description,
+            category,
+            status,
+            value,
+            in_installments,
+            number_installments,
+            register_date,
             maturity_date
         )
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     '''
 
-    db_cursor.execute(insert_command, (
-       expense_data['user_id'],
-       expense_data['csv_id'],
-       expense_data['title'],
-       expense_data['description'],
-       expense_data['category'],
-       expense_data['status'],
-       expense_data['value'],
-       expense_data['in_installments'],
-       expense_data.get('number_installments'),
-       expense_data['register_date'],
-       expense_data['maturity_date']
-    ))
+    db_cursor.execute(
+        insert_command,
+        (
+            expense_data['user_id'],
+            expense_data['csv_id'],
+            expense_data['title'],
+            expense_data['description'],
+            expense_data['category'],
+            expense_data['status'],
+            expense_data['value'],
+            expense_data['in_installments'],
+            expense_data.get('number_installments'),
+            expense_data['register_date'],
+            expense_data['maturity_date'],
+        ),
+    )
 
 
 def get_expenses(user_id: int, db_cursor: MySQLCursorAbstract) -> list[dict]:
@@ -82,9 +86,7 @@ def get_expenses(user_id: int, db_cursor: MySQLCursorAbstract) -> list[dict]:
 
 
 def get_expense(
-    expense_id: int, 
-    logged_in_user_id: int, 
-    db_cursor: MySQLCursorAbstract
+    expense_id: int, logged_in_user_id: int, db_cursor: MySQLCursorAbstract
 ) -> dict:
     get_expense_command = '''
         SELECT * FROM expenses
@@ -110,20 +112,16 @@ def get_calc_expenses(user_id: int, db_cursor: MySQLCursorAbstract) -> dict:
         GROUP BY user_id
     '''
 
-    db_cursor.execute(get_command, (
-        'quitado',
-        'atrasado',
-        user_id
-    ))
+    db_cursor.execute(get_command, ('quitado', 'atrasado', user_id))
 
     return db_cursor.fetchone()
 
 
 def update_expense(
-    expense_data: dict, 
-    expense_id: int, 
-    logged_in_user_id: int, 
-    db_cursor: MySQLCursorAbstract
+    expense_data: dict,
+    expense_id: int,
+    logged_in_user_id: int,
+    db_cursor: MySQLCursorAbstract,
 ) -> None:
 
     update_command = '''
@@ -141,30 +139,31 @@ def update_expense(
         WHERE id = %s AND user_id = %s
     '''
 
-    db_cursor.execute(update_command, (
-        expense_data['title'],
-        expense_data['description'],
-        expense_data['category'],
-        expense_data['status'],
-        expense_data['value'],
-        expense_data['in_installments'],
-        expense_data.get('number_installments'),
-        expense_data['register_date'],
-        expense_data['maturity_date'],
-        expense_id,
-        logged_in_user_id
-    ))
+    db_cursor.execute(
+        update_command,
+        (
+            expense_data['title'],
+            expense_data['description'],
+            expense_data['category'],
+            expense_data['status'],
+            expense_data['value'],
+            expense_data['in_installments'],
+            expense_data.get('number_installments'),
+            expense_data['register_date'],
+            expense_data['maturity_date'],
+            expense_id,
+            logged_in_user_id,
+        ),
+    )
 
 
 def delete_expense(
-    expense_id: int, 
-    logged_in_user_id: int, 
-    db_cursor: MySQLCursorAbstract
+    expense_id: int, logged_in_user_id: int, db_cursor: MySQLCursorAbstract
 ) -> None:
 
     delete_command = '''
         DELETE FROM expenses
-        WHERE id = %s 
+        WHERE id = %s
         AND user_id = %s
     '''
 

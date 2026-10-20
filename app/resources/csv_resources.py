@@ -1,18 +1,15 @@
 from flask.views import MethodView
 from flask_smorest import Blueprint
 
-from app.schemas.common_schema import ErrorResponseSchema
-from app.schemas.csv_schema import (
-    CsvDetailSchemaResponse,
-    CsvListSchemaResponse
-)
 from app.resources.common import docs_only, protected
+from app.schemas.common_schema import ErrorResponseSchema
+from app.schemas.csv_schema import CsvDetailSchemaResponse, CsvListSchemaResponse
 
 csv_bp = Blueprint(
     'csv_docs',
     __name__,
     url_prefix='/csvs',
-    description='CSVs enviados pelo usuário logado'
+    description='CSVs enviados pelo usuário logado',
 )
 
 
@@ -42,9 +39,7 @@ class CsvById(MethodView):
     @protected(csv_bp)
     @csv_bp.response(204)
     @csv_bp.alt_response(
-        409,
-        schema=ErrorResponseSchema,
-        description='CSV possui despesas vinculadas'
+        409, schema=ErrorResponseSchema, description='CSV possui despesas vinculadas'
     )
     @csv_bp.alt_response(400, schema=ErrorResponseSchema)
     def delete(self, csv_id):

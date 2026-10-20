@@ -3,8 +3,7 @@ from typing import NoReturn
 from app.schemas.common_schema import ErrorResponseSchema
 
 DOCS_ONLY_MESSAGE = (
-    'Blueprint apenas de documentação: a execução real das rotas '
-    'fica em app/routers'
+    'Blueprint apenas de documentação: a execução real das rotas ' 'fica em app/routers'
 )
 
 
@@ -17,7 +16,7 @@ def protected(blp):
         func = blp.alt_response(
             401,
             schema=ErrorResponseSchema,
-            description='Token ausente, inválido ou expirado'
+            description='Token ausente, inválido ou expirado',
         )(func)
         return blp.doc(security=[{'bearerAuth': []}])(func)
 

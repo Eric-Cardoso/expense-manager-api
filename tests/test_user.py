@@ -1,21 +1,20 @@
-from app.services.user_service import (
-    register_user, 
-    validate_user_email, 
-    validate_user_password
-)
-from email_validator import EmailNotValidError
-from mysql.connector.errors import OperationalError, IntegrityError
 import pytest
+from email_validator import EmailNotValidError
+from mysql.connector.errors import IntegrityError, OperationalError
+
+from app.services.user_service import (
+    register_user,
+    validate_user_email,
+    validate_user_password,
+)
+
 
 @pytest.fixture
 def user():
-    data_user = {
-        'name': 'Bob',
-        'email': 'bob@gmail.com',
-        'password': 'bob@12345'
-    }
+    data_user = {'name': 'Bob', 'email': 'bob@gmail.com', 'password': 'bob@12345'}
 
     return data_user
+
 
 @pytest.fixture
 def mocker_email(mocker):
@@ -23,74 +22,73 @@ def mocker_email(mocker):
 
     return mocked_email
 
+
 @pytest.fixture
 def mocker_password(mocker):
-    mocked_password = mocker.patch(
-        'app.services.user_service.validate_user_password'
-    )
+    mocked_password = mocker.patch('app.services.user_service.validate_user_password')
 
     return mocked_password
+
 
 @pytest.fixture
 def mocker_password_hash(mocker):
-    mocked_password = mocker.patch(
-        'app.services.user_service.encrypt_password'
-    )
+    mocked_password = mocker.patch('app.services.user_service.encrypt_password')
 
     return mocked_password
 
+
 @pytest.fixture
 def mocker_get_connection(mocker):
-    mocked_get_connection = mocker.patch(
-        'app.services.user_service.get_connection'
-    )
+    mocked_get_connection = mocker.patch('app.services.user_service.get_connection')
 
     return mocked_get_connection
 
+
 @pytest.fixture
 def mocker_get_cursor(mocker):
-    mocked_get_cursor = mocker.patch(
-        'app.services.user_service.get_cursor'
-    )
+    mocked_get_cursor = mocker.patch('app.services.user_service.get_cursor')
 
     return mocked_get_cursor
 
+
 @pytest.fixture
 def mocker_insert_user(mocker):
-    mocked_insert_user = mocker.patch(
-        'app.services.user_service.insert_user'
-    )
+    mocked_insert_user = mocker.patch('app.services.user_service.insert_user')
 
     return mocked_insert_user
 
+
 @pytest.fixture
 def mocker_save_data(mocker):
-    mocked_save_data = mocker.patch(
-        'app.services.user_service.save_data'
-    )
+    mocked_save_data = mocker.patch('app.services.user_service.save_data')
 
     return mocked_save_data
 
+
 @pytest.fixture
 def mocker_close_connection(mocker):
-    mocked_close_connection = mocker.patch(
-        'app.services.user_service.close_connection'
-    )
+    mocked_close_connection = mocker.patch('app.services.user_service.close_connection')
 
     return mocked_close_connection
 
+
 @pytest.fixture
 def mocker_close_cursor(mocker):
-    mocked_close_cursor = mocker.patch(
-        'app.services.user_service.close_cursor'
-    )
+    mocked_close_cursor = mocker.patch('app.services.user_service.close_cursor')
 
     return mocked_close_cursor
 
 
 async def test_register_user_should_return_successfully_registered_user(
-    mocker_email, mocker_password, mocker_password_hash, mocker_get_connection, 
-    mocker_get_cursor, mocker_insert_user, mocker_save_data, user, app
+    mocker_email,
+    mocker_password,
+    mocker_password_hash,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_insert_user,
+    mocker_save_data,
+    user,
+    app,
 ) -> None:
 
     with app.test_request_context(json=user):
@@ -121,9 +119,17 @@ async def test_register_user_should_return_successfully_registered_user(
 
 
 async def test_register_user_should_call_dependencies_with_correct_arguments(
-    mocker_email, mocker_password, mocker_password_hash, mocker_get_connection,
-    mocker_get_cursor, mocker_insert_user, mocker_save_data,
-    mocker_close_connection, mocker_close_cursor, user, app
+    mocker_email,
+    mocker_password,
+    mocker_password_hash,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_insert_user,
+    mocker_save_data,
+    mocker_close_connection,
+    mocker_close_cursor,
+    user,
+    app,
 ) -> None:
 
     with app.test_request_context(json=user):
@@ -152,24 +158,18 @@ async def test_register_user_should_call_dependencies_with_correct_arguments(
         assert expected_response == response['message_success']
         assert status_code == 201
 
-        mocker_email.assert_called_once_with(
-            user_email=user['email']
-        )
-        mocker_password.assert_called_once_with(
-            user_password=user['password']
-        )
-        mocker_password_hash.assert_called_once_with(
-            user_password=user['password']
-        )
+        mocker_email.assert_called_once_with(user_email=user['email'])
+        mocker_password.assert_called_once_with(user_password=user['password'])
+        mocker_password_hash.assert_called_once_with(user_password=user['password'])
         mocker_get_connection.assert_called_once()
         mocker_get_cursor.assert_called_once_with(db_conn=mocked_conn)
         mocker_insert_user.assert_called_once_with(
             data_user={
                 'name': user['name'],
                 'email': user['email'],
-                'password': 'weorkm543256yhbvfd234w2w'
+                'password': 'weorkm543256yhbvfd234w2w',
             },
-            db_cursor=mocked_cursor
+            db_cursor=mocked_cursor,
         )
         mocker_save_data.assert_called_once_with(db_conn=mocked_conn)
         mocker_close_cursor.assert_called_once_with(db_cursor=mocked_cursor)
@@ -178,9 +178,17 @@ async def test_register_user_should_call_dependencies_with_correct_arguments(
 
 
 async def test_register_user_should_raise_exception_if_connection_fails(
-    mocker_email, mocker_password, mocker_password_hash, mocker_get_connection,
-    mocker_get_cursor, mocker_insert_user, mocker_save_data,
-    mocker_close_connection, mocker_close_cursor, user, app
+    mocker_email,
+    mocker_password,
+    mocker_password_hash,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_insert_user,
+    mocker_save_data,
+    mocker_close_connection,
+    mocker_close_cursor,
+    user,
+    app,
 ) -> None:
 
     with app.test_request_context(json=user):
@@ -203,15 +211,9 @@ async def test_register_user_should_raise_exception_if_connection_fails(
         assert expected_response == response['message_error']
         assert status_code == 400
 
-        mocker_email.assert_called_once_with(
-            user_email=user['email']
-        )
-        mocker_password.assert_called_once_with(
-            user_password=user['password']
-        )
-        mocker_password_hash.assert_called_once_with(
-            user_password=user['password']
-        )
+        mocker_email.assert_called_once_with(user_email=user['email'])
+        mocker_password.assert_called_once_with(user_password=user['password'])
+        mocker_password_hash.assert_called_once_with(user_password=user['password'])
         mocker_get_connection.assert_called_once()
         mocker_get_cursor.assert_not_called()
         mocker_insert_user.assert_not_called()
@@ -221,9 +223,17 @@ async def test_register_user_should_raise_exception_if_connection_fails(
 
 
 async def test_register_user_should_raise_exception_if_insert_fails(
-    mocker_email, mocker_password, mocker_password_hash, mocker_get_connection,
-    mocker_get_cursor, mocker_insert_user, mocker_save_data,
-    mocker_close_connection, mocker_close_cursor, user, app
+    mocker_email,
+    mocker_password,
+    mocker_password_hash,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_insert_user,
+    mocker_save_data,
+    mocker_close_connection,
+    mocker_close_cursor,
+    user,
+    app,
 ) -> None:
 
     with app.test_request_context(json=user):
@@ -239,9 +249,7 @@ async def test_register_user_should_raise_exception_if_insert_fails(
 
         mocked_cursor = mocker_get_cursor.return_value
 
-        mocker_insert_user.side_effect = IntegrityError(
-            'Constraint violation'
-        )
+        mocker_insert_user.side_effect = IntegrityError('Constraint violation')
 
         expected_response = 'Erro ao finalizar cadastro, tente novamente'
 
@@ -252,15 +260,9 @@ async def test_register_user_should_raise_exception_if_insert_fails(
         assert expected_response == response['message_error']
         assert status_code == 400
 
-        mocker_email.assert_called_once_with(
-            user_email=user['email']
-        )
-        mocker_password.assert_called_once_with(
-            user_password=user['password']
-        )
-        mocker_password_hash.assert_called_once_with(
-            user_password=user['password']
-        )
+        mocker_email.assert_called_once_with(user_email=user['email'])
+        mocker_password.assert_called_once_with(user_password=user['password'])
+        mocker_password_hash.assert_called_once_with(user_password=user['password'])
         mocker_get_connection.assert_called_once()
         mocker_insert_user.assert_called_once()
         mocker_save_data.assert_not_called()
@@ -268,10 +270,19 @@ async def test_register_user_should_raise_exception_if_insert_fails(
         mocker_close_cursor.assert_called_once_with(db_cursor=mocked_cursor)
         mocker_close_connection.assert_called_once_with(db_conn=mocked_conn)
 
+
 async def test_register_user_should_raise_exception_if_commit_fails(
-    mocker_email, mocker_password, mocker_password_hash, mocker_get_connection,
-    mocker_get_cursor, mocker_insert_user, mocker_save_data,
-    mocker_close_connection, mocker_close_cursor, user, app
+    mocker_email,
+    mocker_password,
+    mocker_password_hash,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_insert_user,
+    mocker_save_data,
+    mocker_close_connection,
+    mocker_close_cursor,
+    user,
+    app,
 ) -> None:
 
     with app.test_request_context(json=user):
@@ -300,15 +311,9 @@ async def test_register_user_should_raise_exception_if_commit_fails(
         assert expected_response == response['message_error']
         assert status_code == 400
 
-        mocker_email.assert_called_once_with(
-            user_email=user['email']
-        )
-        mocker_password.assert_called_once_with(
-            user_password=user['password']
-        )
-        mocker_password_hash.assert_called_once_with(
-            user_password=user['password']
-        )
+        mocker_email.assert_called_once_with(user_email=user['email'])
+        mocker_password.assert_called_once_with(user_password=user['password'])
+        mocker_password_hash.assert_called_once_with(user_password=user['password'])
         mocker_get_connection.assert_called_once()
         mocker_insert_user.assert_called_once()
         mocker_save_data.assert_called_once()
@@ -316,10 +321,19 @@ async def test_register_user_should_raise_exception_if_commit_fails(
         mocker_close_cursor.assert_called_once_with(db_cursor=mocked_cursor)
         mocker_close_connection.assert_called_once_with(db_conn=mocked_conn)
 
+
 async def test_register_user_should_raise_exception_if_rollback_fails(
-    mocker_email, mocker_password, mocker_password_hash, mocker_get_connection,
-    mocker_get_cursor, mocker_insert_user, mocker_save_data,
-    mocker_close_connection, mocker_close_cursor, user, app
+    mocker_email,
+    mocker_password,
+    mocker_password_hash,
+    mocker_get_connection,
+    mocker_get_cursor,
+    mocker_insert_user,
+    mocker_save_data,
+    mocker_close_connection,
+    mocker_close_cursor,
+    user,
+    app,
 ) -> None:
 
     with app.test_request_context(json=user):
@@ -348,15 +362,9 @@ async def test_register_user_should_raise_exception_if_rollback_fails(
         assert expected_response == response['message_error']
         assert status_code == 400
 
-        mocker_email.assert_called_once_with(
-            user_email=user['email']
-        )
-        mocker_password.assert_called_once_with(
-            user_password=user['password']
-        )
-        mocker_password_hash.assert_called_once_with(
-            user_password=user['password']
-        )
+        mocker_email.assert_called_once_with(user_email=user['email'])
+        mocker_password.assert_called_once_with(user_password=user['password'])
+        mocker_password_hash.assert_called_once_with(user_password=user['password'])
         mocker_get_connection.assert_called_once()
         mocker_insert_user.assert_called_once()
         mocker_save_data.assert_not_called()
@@ -364,9 +372,8 @@ async def test_register_user_should_raise_exception_if_rollback_fails(
         mocker_close_cursor.assert_called_once_with(db_cursor=mocked_cursor)
         mocker_close_connection.assert_called_once_with(db_conn=mocked_conn)
 
-async def test_validate_user_email_verify_expected_behavior(
-    user, mocker
-) -> None:
+
+async def test_validate_user_email_verify_expected_behavior(user, mocker) -> None:
     # Arrange
     mocker_validator = mocker.patch('app.auth.auth_user.validate_email')
 
@@ -377,6 +384,7 @@ async def test_validate_user_email_verify_expected_behavior(
 
     # Assert
     mocker_validator.assert_called_once()
+
 
 async def test_validate_user_email_should_raise_exception_if_email_invalid(
     user, mocker
@@ -393,13 +401,10 @@ async def test_validate_user_email_should_raise_exception_if_email_invalid(
     # Assert
     mocker_validator.assert_called_once()
 
-async def test_validate_user_password_verify_expected_behavior(
-    user, mocker
-) -> None:
+
+async def test_validate_user_password_verify_expected_behavior(user, mocker) -> None:
     # Arrange
-    mocker_validator = mocker.patch(
-        'app.auth.auth_user.PasswordPolicy'
-    )
+    mocker_validator = mocker.patch('app.auth.auth_user.PasswordPolicy')
 
     mocker_policy = mocker_validator.from_names.return_value
 
@@ -414,16 +419,15 @@ async def test_validate_user_password_verify_expected_behavior(
     mocker_validator.from_names.assert_called_once()
     mocker_test_password.assert_called_once()
 
+
 async def test_validate_user_password_should_raise_exception_if_password_invalid(
     user, mocker
 ) -> None:
     # Arrange
-    mocker_validator = mocker.patch(
-        'app.auth.auth_user.PasswordPolicy'
-    )
+    mocker_validator = mocker.patch('app.auth.auth_user.PasswordPolicy')
 
     mocker_policy = mocker_validator.from_names.return_value
-    
+
     mocker_test_errors = mocker_policy.test
 
     mocker_test_errors.side_effect = ValueError('Invalid password')

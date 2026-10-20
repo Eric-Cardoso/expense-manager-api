@@ -1,18 +1,14 @@
+from datetime import datetime, timezone
+
 from app.repo.database import (
+    close_connection,
+    close_cursor,
     get_connection,
     get_cursor,
     save_data,
-    close_connection, 
-    close_cursor
 )
 from app.repo.expense_repo import get_calc_expenses
-from app.repo.report_repo import (
-    generate_report, 
-    get_reports, 
-    get_report,
-    delete_report
-)
-from datetime import datetime, timezone
+from app.repo.report_repo import delete_report, generate_report, get_report, get_reports
 
 
 async def generate_expenses_report(request_token) -> dict:
@@ -27,46 +23,38 @@ async def generate_expenses_report(request_token) -> dict:
         db_cursor = get_cursor(db_conn=db_conn)
 
         db_calc_expenses = get_calc_expenses(
-            user_id=int(request_token['sub']), 
-            db_cursor=db_cursor
+            user_id=int(request_token['sub']), db_cursor=db_cursor
         )
 
         if not db_calc_expenses:
             return {
                 'error_message': (
-                    'Não foi possível gerar o relatório, '
-                    'nenhuma despesa encontrada'
+                    'Não foi possível gerar o relatório, ' 'nenhuma despesa encontrada'
                 )
             }, 404
 
         generate_report(
             calc_expenses=db_calc_expenses,
-            current_date=datetime.now(tz=timezone.utc).date(), 
-            user_id=int(request_token['sub']), 
-            db_cursor=db_cursor
+            current_date=datetime.now(tz=timezone.utc).date(),
+            user_id=int(request_token['sub']),
+            db_cursor=db_cursor,
         )
 
         save_data(db_conn=db_conn)
 
-        return {
-            'success_message': 'Relatório gerado com sucesso'
-        }, 201
-    
+        return {'success_message': 'Relatório gerado com sucesso'}, 201
+
     except Exception:
         try:
             if db_conn:
                 db_conn.rollback()
         except Exception:
             return {
-                'error_message': (
-                    'Não foi possível gerar o relatório, tente novamente'
-                )
-            }, 400 
-        
+                'error_message': ('Não foi possível gerar o relatório, tente novamente')
+            }, 400
+
         return {
-            'error_message': (
-                'Não foi possível gerar o relatório, tente novamente'
-            )
+            'error_message': ('Não foi possível gerar o relatório, tente novamente')
         }, 400
 
     finally:
@@ -87,10 +75,7 @@ async def get_user_reports(request_token) -> list[dict]:
         db_conn = get_connection()
         db_cursor = get_cursor(db_conn=db_conn)
 
-        db_reports = get_reports(
-            user_id=int(request_token['sub']),
-            db_cursor=db_cursor
-        )
+        db_reports = get_reports(user_id=int(request_token['sub']), db_cursor=db_cursor)
 
         if not db_reports:
             return {
@@ -102,14 +87,12 @@ async def get_user_reports(request_token) -> list[dict]:
 
         return {
             'success_message': 'Relatórios buscados com sucesso',
-            'reports': db_reports
+            'reports': db_reports,
         }, 200
-    
+
     except Exception:
         return {
-            'error_message': (
-                'Não foi possível buscar os relatórios, tente novamente'
-            )
+            'error_message': ('Não foi possível buscar os relatórios, tente novamente')
         }, 400
 
     finally:
@@ -133,27 +116,24 @@ async def get_user_report(request_token, request_report_id: int) -> dict:
         db_report = get_report(
             report_id=request_report_id,
             user_id=int(request_token['sub']),
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
 
         if not db_report:
             return {
                 'error_message': (
-                    'Não foi possível buscar o relatório, '
-                    'relatório não encontrado'
+                    'Não foi possível buscar o relatório, ' 'relatório não encontrado'
                 )
             }, 404
 
         return {
             'success_message': 'Relatório buscado com sucesso',
-            'report': db_report
+            'report': db_report,
         }, 200
 
     except Exception:
         return {
-            'error_message': (
-                'Não foi possível buscar o relatório, tente novamente'
-            )
+            'error_message': ('Não foi possível buscar o relatório, tente novamente')
         }, 400
 
     finally:
@@ -177,7 +157,7 @@ async def delete_user_report(request_token, request_report_id: int) -> str:
         delete_report(
             report_id=request_report_id,
             user_id=int(request_token['sub']),
-            db_cursor=db_cursor
+            db_cursor=db_cursor,
         )
 
         save_data(db_conn=db_conn)
@@ -193,12 +173,10 @@ async def delete_user_report(request_token, request_report_id: int) -> str:
                 'error_message': (
                     'Não foi possível deletar o relatório, tente novamente'
                 )
-            }, 400 
-        
+            }, 400
+
         return {
-            'error_message': (
-                'Não foi possível deletar o relatório, tente novamente'
-            )
+            'error_message': ('Não foi possível deletar o relatório, tente novamente')
         }, 400
 
     finally:

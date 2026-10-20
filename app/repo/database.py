@@ -1,12 +1,11 @@
-from dotenv import load_dotenv
-from mysql.connector.abstracts import (
-    MySQLConnectionAbstract, 
-    MySQLCursorAbstract
-)
-import mysql.connector
 import os
 
+import mysql.connector
+from dotenv import load_dotenv
+from mysql.connector.abstracts import MySQLConnectionAbstract, MySQLCursorAbstract
+
 load_dotenv()
+
 
 def get_connection() -> MySQLConnectionAbstract:
     return mysql.connector.connect(
@@ -15,17 +14,21 @@ def get_connection() -> MySQLConnectionAbstract:
         password=os.getenv('MYSQL_PASSWORD'),
         host=os.getenv('DATABASE_HOST'),
         port=int(os.getenv('DATABASE_PORT')),
-        charset='utf8mb4'
+        charset='utf8mb4',
     )
 
-def get_cursor(db_conn: MySQLConnectionAbstract) -> MySQLCursorAbstract: 
+
+def get_cursor(db_conn: MySQLConnectionAbstract) -> MySQLCursorAbstract:
     return db_conn.cursor(dictionary=True)
+
 
 def close_connection(db_conn: MySQLConnectionAbstract) -> None:
     db_conn.close()
 
+
 def close_cursor(db_cursor: MySQLCursorAbstract) -> None:
     db_cursor.close()
+
 
 def save_data(db_conn: MySQLConnectionAbstract) -> None:
     db_conn.commit()

@@ -9,19 +9,16 @@ class ExpenseSchemaRequest(Schema):
     title = fields.String(required=True, validate=validate.Length(max=50))
     description = fields.String(allow_none=True)
     category = fields.String(required=True, validate=validate.Length(max=50))
-    status = fields.String(
-        required=True, validate=validate.OneOf(EXPENSE_STATUS)
-    )
+    status = fields.String(required=True, validate=validate.OneOf(EXPENSE_STATUS))
     value = fields.Decimal(required=True, places=2)
     in_installments = fields.Boolean(required=True)
     number_installments = fields.Integer(
         allow_none=True,
         metadata={
             'description': (
-                'Obrigatório se in_installments for true; '
-                'proibido se for false'
+                'Obrigatório se in_installments for true; ' 'proibido se for false'
             )
-        }
+        },
     )
     register_date = fields.Date(
         required=True, metadata={'description': 'Formato YYYY-MM-DD'}

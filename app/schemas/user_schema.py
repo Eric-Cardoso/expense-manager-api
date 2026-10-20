@@ -10,10 +10,9 @@ class RegisterUserSchemaRequest(Schema):
         load_only=True,
         metadata={
             'description': (
-                'Mínimo de 8 caracteres, com maiúscula, número e '
-                'caractere especial'
+                'Mínimo de 8 caracteres, com maiúscula, número e ' 'caractere especial'
             )
-        }
+        },
     )
 
 

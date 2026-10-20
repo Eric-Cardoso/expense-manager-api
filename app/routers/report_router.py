@@ -1,10 +1,11 @@
 from flask import Blueprint
+
 from app.auth.decorators import login_required
 from app.services.report_service import (
-    generate_expenses_report, 
-    get_user_reports, 
+    delete_user_report,
+    generate_expenses_report,
     get_user_report,
-    delete_user_report
+    get_user_reports,
 )
 
 route_report_bp = Blueprint('report', __name__, url_prefix='/reports')
@@ -26,8 +27,7 @@ async def route_get_user_reports(request_token) -> list[dict]:
 @login_required
 async def route_get_user_report(request_token, report_id) -> dict:
     return await get_user_report(
-        request_token=request_token,
-        request_report_id=report_id
+        request_token=request_token, request_report_id=report_id
     )
 
 
@@ -35,6 +35,5 @@ async def route_get_user_report(request_token, report_id) -> dict:
 @login_required
 async def route_delete_user_report(request_token, report_id) -> dict:
     return await delete_user_report(
-        request_token=request_token,
-        request_report_id=report_id
+        request_token=request_token, request_report_id=report_id
     )
